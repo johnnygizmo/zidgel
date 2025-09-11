@@ -19,10 +19,6 @@ class FG_OT_StartController(bpy.types.Operator):
 
     _timer = None
 
-    # def init(self):
-    #     bpy.context.scene.controller_running = False
-    #     mapping_data.initialize_mapping_sets(bpy.context)
-
     def modal(self, context, event):
         scene = context.scene
         if event.type == "TIMER":
@@ -44,25 +40,26 @@ class FG_OT_StartController(bpy.types.Operator):
                         continue
                     
                     op = mapping.operation
-                    if op == "":
-                       op = "value"
-
-                    value = combined.get(mapping.button)
-                    # if mapping.invert:
-                    #     value = 1-value
-                    value = eval(op)
+                    value = combined.get(mapping.button)                    
                     ob = bpy.data.objects.get(mapping.object)
 
-                    command = ""
+                    command = " = " + str(value)
+                    if mapping.operation == "expression":
+                        command = mapping.expression
+                    elif mapping.operation == "invertb":
+                        command = " = " + str(1 - value)
+                    elif mapping.operation == "inverta":
+                        command = " = " + str(-value)
+
                     if mapping.mapping_type == "location":
-                        command = "ob.location." + mapping.axis + " = " + str(value)
+                        command = "ob.location." + mapping.axis + command
                     elif mapping.mapping_type == "rotation_euler":
-                        command = "ob.rotation_euler." + mapping.axis + " = " + str(value)
+                        command = "ob.rotation_euler." + mapping.axis + command
                     elif mapping.mapping_type == "scale":
-                        command = "ob.scale." + mapping.axis + " = " + str(value)
+                        command = "ob.scale." + mapping.axis + command
                     elif mapping.mapping_type == "shape_key":
                         if ob.data.shape_keys:
-                            command = "ob.data.shape_keys.key_blocks[\"" + mapping.data_path + "\"].value = " + str(value)
+                            command = "ob.data.shape_keys.key_blocks[\"" + mapping.data_path + "\"].value" + command
                         else:
                             continue
 

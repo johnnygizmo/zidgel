@@ -51,26 +51,46 @@ static PyObject* fg_get_buttons(PyObject* self, PyObject* args) {
     }
     SDL_PumpEvents();
     // SDL3 button constants for A, B, X, Y
-    int a = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_SOUTH);  // A
-    int b = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_EAST); // B
-    int x = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_WEST);  // X
-    int y = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_NORTH);    // Y
+    int south = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_SOUTH);  // A
+    int east = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_EAST); // B
+    int west = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_WEST);  // X
+    int north = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_NORTH);    // Y
 
     int lshoulder = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_LEFT_SHOULDER); 
     int rshoulder = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER); 
+ 
     int lstick = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_LEFT_STICK); 
     int rstick = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_RIGHT_STICK); 
-
+ 
     int dpad_up = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_DPAD_UP);
     int dpad_down = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_DPAD_DOWN);
     int dpad_left = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_DPAD_LEFT);
     int dpad_right = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_DPAD_RIGHT);
+ 
+    int misc1 = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_MISC1); 
+    int misc2 = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_MISC2); 
+    int misc3 = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_MISC3); 
+    int misc4 = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_MISC4); 
+    int misc5 = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_MISC5); 
+    int misc6 = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_MISC6);
+ 
+    int back = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_BACK);
+    int start = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_START);
+    int guide = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_GUIDE);
+ 
+    int lp1 = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_LEFT_PADDLE1);
+    int lp2 = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_LEFT_PADDLE2);
+    int rp1 = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_RIGHT_PADDLE1);
+    int rp2 = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_RIGHT_PADDLE2);
+
+    int touchbutton = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_TOUCHPAD);
+
 
     PyObject* dict = PyDict_New();
-    PyDict_SetItemString(dict, "a", PyLong_FromLong(a));
-    PyDict_SetItemString(dict, "b", PyLong_FromLong(b));
-    PyDict_SetItemString(dict, "x", PyLong_FromLong(x));
-    PyDict_SetItemString(dict, "y", PyLong_FromLong(y));
+    PyDict_SetItemString(dict, "south", PyLong_FromLong(south));
+    PyDict_SetItemString(dict, "east", PyLong_FromLong(east));
+    PyDict_SetItemString(dict, "west", PyLong_FromLong(west));
+    PyDict_SetItemString(dict, "north", PyLong_FromLong(north));
     PyDict_SetItemString(dict, "lshoulder", PyLong_FromLong(lshoulder));
     PyDict_SetItemString(dict, "rshoulder", PyLong_FromLong(rshoulder));
     PyDict_SetItemString(dict, "lstick", PyLong_FromLong(lstick));
@@ -79,32 +99,23 @@ static PyObject* fg_get_buttons(PyObject* self, PyObject* args) {
     PyDict_SetItemString(dict, "dpad_down", PyLong_FromLong(dpad_down));
     PyDict_SetItemString(dict, "dpad_left", PyLong_FromLong(dpad_left));
     PyDict_SetItemString(dict, "dpad_right", PyLong_FromLong(dpad_right));
-    return dict;
-}
-
-static PyObject* fg_get_misc_buttons(PyObject* self, PyObject* args) {
-    if (!gamepad) {
-        return PyErr_Format(PyExc_RuntimeError, "Gamepad not initialized");
-    }
-    SDL_PumpEvents();
-    // SDL3 button constants for A, B, X, Y
-    int misc1 = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_MISC1); 
-    int misc2 = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_MISC2); 
-    int misc3 = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_MISC3); 
-    int misc4 = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_MISC4); 
-    int misc5 = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_MISC5); 
-    int misc6 = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_MISC6);
-
-    PyObject* dict = PyDict_New();
+    PyDict_SetItemString(dict, "back", PyLong_FromLong(back));
+    PyDict_SetItemString(dict, "start", PyLong_FromLong(start));
+    PyDict_SetItemString(dict, "guide", PyLong_FromLong(guide));
+    PyDict_SetItemString(dict, "lp1", PyLong_FromLong(lp1));
+    PyDict_SetItemString(dict, "lp2", PyLong_FromLong(lp2));
+    PyDict_SetItemString(dict, "rp1", PyLong_FromLong(rp1));
+    PyDict_SetItemString(dict, "rp2", PyLong_FromLong(rp2));
     PyDict_SetItemString(dict, "misc1", PyLong_FromLong(misc1));
     PyDict_SetItemString(dict, "misc2", PyLong_FromLong(misc2));
     PyDict_SetItemString(dict, "misc3", PyLong_FromLong(misc3));
     PyDict_SetItemString(dict, "misc4", PyLong_FromLong(misc4));
     PyDict_SetItemString(dict, "misc5", PyLong_FromLong(misc5));
     PyDict_SetItemString(dict, "misc6", PyLong_FromLong(misc6));
+    PyDict_SetItemString(dict, "touchbutton", PyLong_FromLong(touchbutton));
+    
     return dict;
 }
-
 
 static PyObject* fg_quit(PyObject* self, PyObject* args) {
     if (gamepad) {
@@ -119,7 +130,6 @@ static PyMethodDef FastGamepadMethods[] = {
     {"init", fg_init, METH_NOARGS, "Init SDL3 and open gamepad"},
     {"get_axes", fg_get_axes, METH_NOARGS, "Get joystick axes"},
     {"get_buttons", fg_get_buttons, METH_NOARGS, "Get A/B/X/Y button states"},
-    {"get_misc_buttons", fg_get_misc_buttons, METH_NOARGS, "Get misc button states"},
     {"quit", fg_quit, METH_NOARGS, "Close gamepad and quit SDL"},
     {NULL, NULL, 0, NULL}
 };

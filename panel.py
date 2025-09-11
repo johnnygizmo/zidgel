@@ -60,9 +60,9 @@ class FG_UL_MappingSetList(bpy.types.UIList):
         ms = item
         if self.layout_type in {'DEFAULT', 'COMPACT'}:
             if ms.active:
-                layout.prop(ms, "active", text="", icon="RECORD_ON")
+                layout.prop(ms, "active", text="", icon="CHECKBOX_HLT")
             else:
-                layout.prop(ms, "active", text="", icon="RECORD_OFF")
+                layout.prop(ms, "active", text="", icon="CHECKBOX_DEHLT")
 
             layout.prop(ms, "name", text="", emboss=False)
             
@@ -74,22 +74,39 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         bm = item
         if self.layout_type in {'DEFAULT', 'COMPACT'}:
+            col = layout.column()
+            row = col.row(align=True)
             if bm.enabled:
-                layout.prop(bm, "enabled", text="", icon="RECORD_ON")
+                row.prop(bm, "enabled", text="", icon="CHECKBOX_HLT")
             else:
-                layout.prop(bm, "enabled", text="", icon="RECORD_OFF")
-            
-            layout.prop(bm, "button", text="")
+                row.prop(bm, "enabled", text="", icon="CHECKBOX_DEHLT")
+
+            row.prop(bm, "button", text="")
             #layout.prop(bm, "invert", icon="ARROW_LEFTRIGHT", text="")
 
             #layout.prop(bm, "scale", text="")
-            layout.prop(bm, "object", text="")
-            layout.prop(bm, "mapping_type", text="")
+            row.prop(bm, "object", text="")
+            row = col.row(align=True)
+            row.separator(factor=3)
+            row.prop(bm, "mapping_type", text="")
+            
             if bm.mapping_type in ("location", "rotation_euler", "scale")  :
-                layout.prop(bm, "axis", text="")
+                row.prop(bm, "axis", text="")
+            elif bm.mapping_type == "shape_key":
+                ob = bpy.data.objects.get(bm.object)
+                #layout.template_path_builder(bm, "data_path", root=ob, text="")
+                if ob and ob.type == 'MESH' and ob.data.shape_keys:
+                    row.prop_search(bm, "data_path", text="", search_data=ob.data.shape_keys, search_property="key_blocks")
+                else:
+                    row.prop(bm, "data_path", text="")
             else:
-                layout.prop(bm, "data_path", text="")
-            layout.prop(bm, "operation", text="", emboss=True)
+                row.prop(bm, "data_path", text="")
+            row = col.row(align=True)
+            row.separator(factor=3)
+
+            row.prop(bm, "operation", text="Operation", emboss=True)
+            if bm.operation == "expression":
+                row.prop(bm, "expression", text="Expression", emboss=True)
         elif self.layout_type in {'GRID'}:
             layout.alignment = 'CENTER'
             layout.label(text=bm.name)

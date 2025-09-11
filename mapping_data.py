@@ -3,6 +3,13 @@ import bpy  # type: ignore
 
 VECTOR_AXES = [("x", "X", ""), ("y", "Y", ""), ("z", "Z", "")]
 
+MAPPING_OPS = [
+    ("value", "Direct Value", "Use the button/axis value directly"),
+    ("invertb", "Inverted Button Value (1 - value)", "Use the inverted button value (1 - value)"),
+    ("inverta", "Inverted Axis Value (-value)", "Use the inverted axis value (-value)"),
+    ("expression", "AssignmentExpression", "Use a Python expression to modify the button/axis value"),
+]
+
 MAPPING_TYPES = [
     ("location", "Location", "","OBJECT_ORIGIN",1),
     ("rotation_euler", "Rotation Euler", "","DRIVER_ROTATIONAL_DIFFERENCE",2),
@@ -21,10 +28,10 @@ GAMEPAD_BUTTONS = [
     ("ry", "Right Stick Y", ""),
     ("rstick", "Right Stick Press", ""),
 
-    ("a", "A Button", ""),
-    ("b", "B Button", ""),
-    ("x", "X Button", ""),
-    ("y", "Y Button", ""),
+    ("south", "South Button", "Bottom face button (e.g. Xbox A button)"),
+    ("east", "East Button", "Bottom face button (e.g. Xbox B button)"),
+    ("west", "West Button", "Bottom face button (e.g. Xbox X button)"),
+    ("north", "North Button", "Bottom face button (e.g. Xbox Y button)"),
 
     ("lshoulder", "Left Shoulder", ""),
     ("lt", "Left Trigger", ""),
@@ -34,13 +41,37 @@ GAMEPAD_BUTTONS = [
     ("dpad_down", "D-Pad Down", ""),
     ("dpad_left", "D-Pad Left", ""),
     ("dpad_right", "D-Pad Right", ""),
+
+    ("back", "Back Button", ""),
+    ("start", "Start Button", ""),
+    ("guide", "Guide Button", ""),
+
+    ("lp1", "Left Paddle 1", "Upper or primary paddle, under your left hand (e.g. Xbox Elite paddle P3, DualSense Edge LB button, Left Joy-Con SL button)"),
+    ("lp2", "Left Paddle 2", "Lower or secondary paddle, under your left hand (e.g. Xbox Elite paddle P4, DualSense Edge left Fn button, Left Joy-Con SR button) "),
+    ("rp1", "Right Paddle 1", "Upper or primary paddle, under your right hand (e.g. Xbox Elite paddle P1, DualSense Edge RB button, Right Joy-Con SR button)"),
+    ("rp2", "Right Paddle 2", "Lower or secondary paddle, under your right hand (e.g. Xbox Elite paddle P2, DualSense Edge right Fn button, Right Joy-Con SL button)"),
+
+    ("misc1", "Misc1 Button", "Additional button (e.g. Xbox Series X share button, PS5 microphone button, Nintendo Switch Pro capture button, Amazon Luna microphone button, Google Stadia capture button)"),
+    ("misc2", "Misc2 Button", "Additional button"), 
+    ("misc3", "Misc3 Button", "Additional button (e.g. Nintendo GameCube left trigger click)"), 
+    ("misc4", "Misc4 Button", "Additional button (e.g. Nintendo GameCube right trigger click)"), 
+    ("misc5", "Misc5 Button", "Additional button"), 
+    ("misc6", "Misc6 Button", "Additional button"), 
+    ("touchbutton", "Touch Button", ""), 
+
     # Add more as needed
 ]
 
 class ButtonMapping(bpy.types.PropertyGroup):
     enabled: bpy.props.BoolProperty(name="Enabled", default=True) # type: ignore
     object: bpy.props.StringProperty(name="Object") # type: ignore
-    operation: bpy.props.StringProperty(name="Operation", default="value") # type: ignore
+    
+    operation:  bpy.props.EnumProperty(
+        name="Opeation",
+        items=MAPPING_OPS,
+        description=""
+    ) # type: ignore
+    expression: bpy.props.StringProperty(name="Expression", default=" = value") # type: ignore
     button: bpy.props.EnumProperty(
         name="Button",
         items=GAMEPAD_BUTTONS,
