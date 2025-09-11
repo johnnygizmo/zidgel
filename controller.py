@@ -9,96 +9,7 @@ bl_info = {
 from multiprocessing import context
 import bpy
 import fastgamepad
-
-
-mapping_sets = [
-    {
-        "active": True,
-        "name": "Default",
-        "button_mappings": [
-             {
-                "enabled": True,
-                "object": "Plane",
-                "name": "Move X",
-                "button": "lx",
-                "scale": 2.0,
-                "data_path": "location.x",
-            },
-            {
-                "enabled": True,
-                "object": "Plane",
-                "name": "Move Y",
-                "button": "ly",
-                "scale": 2.0,
-                "data_path": "location.y",
-            },
-        ]
-    },
-    {
-        "active": False,
-        "name": "Mapping Set 1",
-        "button_mappings": [
-            {
-                "enabled": False,
-                "object": "Plane",
-                "name": "Move X",
-                "button": "lx",
-                "scale": 2.0,
-                "data_path": "location.x",
-            },
-            {
-                "enabled": False,
-                "object": "Plane",
-                "name": "Move Y",
-                "button": "ly",
-                "scale": 2.0,
-                "data_path": "location.y",
-            },
-            {
-                "enabled": True,
-                "object": "Plane",
-                "name": "Rotate Z",
-                "button": "rx",
-                "scale": 1.0,
-                "data_path": "rotation_euler.z",
-            },
-            {
-                "enabled": True,
-                "object": "Plane",
-                "name": "Rotate X",
-                "button": "ry",
-                "scale": 1.0,
-                "data_path": "rotation_euler.x",
-            },
-            {
-                "enabled": True,
-                "object": "Mouth",
-                "name": "A",
-                "button": "rt",
-                "scale": 1.0,
-                "data_path": 'data.shape_keys.key_blocks["Key 1"].value',
-            },
-            {
-                "enabled": True,
-                "object": "Plane",
-                "name": "A",
-                "button": "a",
-                "scale": 1.0,
-                "data_path": 'data.shape_keys.key_blocks["Key 1"].value',
-            },
-            {
-                "enabled": True,
-                "object": "Mouth",
-                "name": "B",
-                "button": "lt",
-                "scale": 1.0,
-                "data_path": 'data.shape_keys.key_blocks["Key 2"].value',
-            },
-            # Add more mappings as needed
-        ],
-    }
-]
-
+from . import mapping_data
 
 class FG_OT_StartController(bpy.types.Operator):
     """Start polling the gamepad"""
@@ -107,6 +18,10 @@ class FG_OT_StartController(bpy.types.Operator):
     bl_label = "Start Gamepad Controller"
 
     _timer = None
+
+    # def init(self):
+    #     bpy.context.scene.controller_running = False
+    #     mapping_data.initialize_mapping_sets(bpy.context)
 
     def modal(self, context, event):
         scene = context.scene
@@ -118,21 +33,61 @@ class FG_OT_StartController(bpy.types.Operator):
             # print(combined)
 
             ob = bpy.context.active_object
-
-            active_mapping_set = next((ms for ms in mapping_sets if ms["active"]), None)
-
-            if ob and active_mapping_set:
-                for mapping in active_mapping_set["button_mappings"]:
-                    if not mapping["enabled"]:
+            mapping_sets = context.scene.mapping_sets
+            active_mapping_set = None
+            if len(mapping_sets) > 0:
+                active_mapping_set = mapping_sets[context.scene.active_mapping_set]
+            
+            if ob and active_mapping_set and active_mapping_set.active :
+                for mapping in active_mapping_set.button_mappings:
+                    if not mapping.enabled or mapping.object == "":
                         continue
-                    value = combined.get(mapping["button"], 0) * mapping["scale"]
-                    ob = bpy.data.objects.get(mapping["object"])
-                    command = "ob." + mapping["data_path"] + " = " + str(value)
-                    # print(command)
+                    
+                    op = mapping.operation
+                    if op == "":
+                       op = "value"
+
+                    value = combined.get(mapping.button)
+                    # if mapping.invert:
+                    #     value = 1-value
+                    value = eval(op)
+                    ob = bpy.data.objects.get(mapping.object)
+
+                    command = ""
+                    if mapping.mapping_type == "location":
+                        command = "ob.location." + mapping.axis + " = " + str(value)
+                    elif mapping.mapping_type == "rotation_euler":
+                        command = "ob.rotation_euler." + mapping.axis + " = " + str(value)
+                    elif mapping.mapping_type == "scale":
+                        command = "ob.scale." + mapping.axis + " = " + str(value)
+                    elif mapping.mapping_type == "shape_key":
+                        if ob.data.shape_keys:
+                            command = "ob.data.shape_keys.key_blocks[\"" + mapping.data_path + "\"].value = " + str(value)
+                        else:
+                            continue
+
+                    else:
+                        command = "ob." + mapping.data_path + " = " + str(value)
+                    
                     exec(command)
 
+                    if(context.scene.frame_current % context.scene.keyframe_interval) == 0:
+                        index_map = {"x": 0, "y": 1, "z": 2}
+                        if mapping.mapping_type == "location":
+                            ob.keyframe_insert(data_path="location", index=index_map.get(mapping.data_path, -1))
+                        elif mapping.mapping_type == "rotation_euler":
+                            ob.keyframe_insert(data_path="rotation_euler", index=index_map.get(mapping.data_path, -1))
+                        elif mapping.mapping_type == "scale":
+                            ob.keyframe_insert(data_path="scale", index=index_map.get(mapping.data_path, -1))
+                        elif mapping.mapping_type == "shape_key":
+                            if ob.data.shape_keys:
+                                key = ob.data.shape_keys.key_blocks.get(mapping.data_path)
+                                if key:
+                                    key.keyframe_insert(data_path="value")
+        
         # Cancel on ESC
         if event.type == "ESC":
+            print("Cancelling gamepad controller...")
             self.cancel(context)
             return {"CANCELLED"}
 
@@ -141,8 +96,11 @@ class FG_OT_StartController(bpy.types.Operator):
     def execute(self, context):
         fastgamepad.init()
         wm = context.window_manager
-        self._timer = wm.event_timer_add(0.03, window=context.window)  # 33 Hz
+        fps = context.scene.controller_fps
+        interval = 1.0 / fps if fps > 0 else 0.03
+        self._timer = wm.event_timer_add(interval, window=context.window)
         wm.modal_handler_add(self)
+        context.scene.controller_running = True
         return {"RUNNING_MODAL"}
 
     def cancel(self, context):
@@ -150,6 +108,7 @@ class FG_OT_StartController(bpy.types.Operator):
         if self._timer:
             wm.event_timer_remove(self._timer)
         fastgamepad.quit()
+        context.scene.controller_running = False
         # print("Gamepad polling cancelled.")
 
 
@@ -161,7 +120,20 @@ def register():
     bpy.types.Scene.fg_rx = bpy.props.FloatProperty()
     bpy.types.Scene.fg_ry = bpy.props.FloatProperty()
     bpy.types.Scene.fg_a = bpy.props.FloatProperty()
-
+    bpy.types.Scene.controller_fps = bpy.props.FloatProperty(
+        name="Controller FPS",
+        description="Polling rate for gamepad controller",
+        default=33.0,
+        min=1.0,
+        max=240.0
+    )
+    bpy.types.Scene.keyframe_interval = bpy.props.IntProperty(
+        name="Keyframe Interval",
+        description="Interval between keyframes",
+        default=1,
+        min=1,
+        max=240
+    )
 
 def unregister():
     bpy.utils.unregister_class(FG_OT_StartController)
@@ -170,6 +142,8 @@ def unregister():
     del bpy.types.Scene.fg_rx
     del bpy.types.Scene.fg_ry
     del bpy.types.Scene.fg_a
+    del bpy.types.Scene.controller_fps
+    del bpy.types.Scene.keyframe_interval
 
 
 if __name__ == "__main__":

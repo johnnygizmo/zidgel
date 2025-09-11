@@ -12,7 +12,8 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 from . import controller
-
+from . import panel
+from . import mapping_data
 
 
 
@@ -20,6 +21,10 @@ from . import controller
 
 def register(): 
     controller.register()
+    panel.register()
+    mapping_data.register()
 
 def unregister(): 
     controller.unregister()
+    panel.unregister()
+    mapping_data.unregister()
