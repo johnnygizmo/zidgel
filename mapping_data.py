@@ -3,6 +3,11 @@ import bpy  # type: ignore
 
 VECTOR_AXES = [("x", "X", ""), ("y", "Y", ""), ("z", "Z", "")]
 
+MAPPING_TARGETS = [
+    ("object", "Object", "Map to Object Properties"),
+
+]
+
 MAPPING_OPS = [
     ("value", "Direct Value", "Use the button/axis value directly"),
     ("invertb", "Inverted Button Value (1 - value)", "Use the inverted button value (1 - value)"),
@@ -15,6 +20,7 @@ MAPPING_TYPES = [
     ("rotation_euler", "Rotation Euler", "","DRIVER_ROTATIONAL_DIFFERENCE",2),
     ("scale", "Scale","", "FULLSCREEN_ENTER",4),
     ("shape_key", "Shape Key", "","SHAPEKEY_DATA",8),
+    ("modifier", "Modifier Value", "","MODIFIER",16),
 
     ("other", "Data Path", "","QUESTION",2048),
 ]
@@ -63,6 +69,13 @@ GAMEPAD_BUTTONS = [
 ]
 
 class ButtonMapping(bpy.types.PropertyGroup):
+    target: bpy.props.EnumProperty(
+        name="Target",
+        items=MAPPING_TARGETS,
+        description="Target to map to",
+        default="object"
+    ) # type: ignore
+
     enabled: bpy.props.BoolProperty(name="Enabled", default=True) # type: ignore
     object: bpy.props.StringProperty(name="Object") # type: ignore
     
@@ -91,6 +104,7 @@ class ButtonMapping(bpy.types.PropertyGroup):
         description="Axis to map"
     ) # type: ignore
     data_path: bpy.props.StringProperty(name="Data Path") # type: ignore
+    sub_data_path: bpy.props.StringProperty(name="Sub Data Path") # type: ignore
 
 class MappingSet(bpy.types.PropertyGroup):
     active: bpy.props.BoolProperty(name="Enabled", default=True) # type: ignore
@@ -101,30 +115,13 @@ class MappingSet(bpy.types.PropertyGroup):
 def register():
     bpy.utils.register_class(ButtonMapping)
     bpy.utils.register_class(MappingSet)
-    bpy.types.Scene.mapping_sets = bpy.props.CollectionProperty(type=MappingSet)
-    bpy.types.Scene.active_mapping_set = bpy.props.IntProperty(name="Active Mapping Set", default=0)
-    
+    bpy.types.Scene.johnnygizmo_puppetstrings_mapping_sets = bpy.props.CollectionProperty(type=MappingSet)
+    bpy.types.Scene.johnnygizmo_puppetstrings_active_mapping_set = bpy.props.IntProperty(name="Active Mapping Set", default=0)
+
 
 def unregister():
-    del bpy.types.Scene.mapping_sets
-    del bpy.types.Scene.active_mapping_set
+    del bpy.types.Scene.johnnygizmo_puppetstrings_mapping_sets
+    del bpy.types.Scene.johnnygizmo_puppetstrings_active_mapping_set
     bpy.utils.unregister_class(MappingSet)
     bpy.utils.unregister_class(ButtonMapping)
-
-# def initialize_mapping_sets(context):
-#     scene = context.scene
-#     scene.mapping_sets.clear()
-#     for ms in mapping_sets:
-#         ms_item = scene.mapping_sets.add()
-#         ms_item.active = ms.get("active", True)
-#         ms_item.name = ms.get("name", "")
-#         ms_item.button_mappings.clear()
-#         for bm in ms.get("button_mappings", []):
-#             bm_item = ms_item.button_mappings.add()
-#             bm_item.enabled = bm.get("enabled", True)
-#             bm_item.object = bm.get("object", "")
-#             bm_item.name = bm.get("name", "")
-#             bm_item.button = bm.get("button", "")
-#             bm_item.scale = bm.get("scale", 1.0)
-#             bm_item.data_path = bm.get("data_path", "")
 

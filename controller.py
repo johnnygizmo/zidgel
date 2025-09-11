@@ -8,6 +8,16 @@ bl_info = {
 
 from multiprocessing import context
 import bpy
+import sys
+import os
+from pathlib import Path
+
+extension_dir = Path(__file__).parent
+if str(extension_dir) not in sys.path:
+    sys.path.insert(0, str(extension_dir))
+if hasattr(os, 'add_dll_directory') and os.name == 'nt':
+    os.add_dll_directory(str(extension_dir))
+
 import fastgamepad
 from . import mapping_data
 
@@ -32,8 +42,8 @@ class FG_OT_StartController(bpy.types.Operator):
             mapping_sets = context.scene.mapping_sets
             active_mapping_set = None
             if len(mapping_sets) > 0:
-                active_mapping_set = mapping_sets[context.scene.active_mapping_set]
-            
+                active_mapping_set = mapping_sets[context.scene.johnnygizmo_puppetstrings_active_mapping_set]
+
             if ob and active_mapping_set and active_mapping_set.active :
                 for mapping in active_mapping_set.button_mappings:
                     if not mapping.enabled or mapping.object == "":
@@ -62,26 +72,39 @@ class FG_OT_StartController(bpy.types.Operator):
                             command = "ob.data.shape_keys.key_blocks[\"" + mapping.data_path + "\"].value" + command
                         else:
                             continue
-
+                    elif mapping.mapping_type == "modifier":
+                        if ob and ob.modifiers:
+                            mod = ob.modifiers.get(mapping.data_path)
+                            if mod and mapping.sub_data_path:
+                                command = "mod" + mapping.sub_data_path + command
+                            else:
+                                continue
+                        else:
+                            continue
                     else:
                         command = "ob." + mapping.data_path + " = " + str(value)
                     
                     exec(command)
 
-                    if(context.scene.frame_current % context.scene.keyframe_interval) == 0:
-                        index_map = {"x": 0, "y": 1, "z": 2}
-                        if mapping.mapping_type == "location":
-                            ob.keyframe_insert(data_path="location", index=index_map.get(mapping.data_path, -1))
-                        elif mapping.mapping_type == "rotation_euler":
-                            ob.keyframe_insert(data_path="rotation_euler", index=index_map.get(mapping.data_path, -1))
-                        elif mapping.mapping_type == "scale":
-                            ob.keyframe_insert(data_path="scale", index=index_map.get(mapping.data_path, -1))
-                        elif mapping.mapping_type == "shape_key":
-                            if ob.data.shape_keys:
-                                key = ob.data.shape_keys.key_blocks.get(mapping.data_path)
-                                if key:
-                                    key.keyframe_insert(data_path="value")
-        
+                    if context.scene.johnnygizmo_puppetstrings_settings.enable_record:
+                        if(context.scene.frame_current % context.scene.johnnygizmo_puppetstrings_settings.keyframe_interval) == 0:
+                            index_map = {"x": 0, "y": 1, "z": 2}
+                            if mapping.mapping_type == "location":
+                                ob.keyframe_insert(data_path="location", index=index_map.get(mapping.data_path, -1))
+                            elif mapping.mapping_type == "rotation_euler":
+                                ob.keyframe_insert(data_path="rotation_euler", index=index_map.get(mapping.data_path, -1))
+                            elif mapping.mapping_type == "scale":
+                                ob.keyframe_insert(data_path="scale", index=index_map.get(mapping.data_path, -1))
+                            elif mapping.mapping_type == "shape_key":
+                                if ob.data.shape_keys:
+                                    key = ob.data.shape_keys.key_blocks.get(mapping.data_path)
+                                    if key:
+                                        key.keyframe_insert(data_path="value")
+                            elif mapping.mapping_type == "modifier":
+                                if ob and ob.modifiers:
+                                    mod = ob.modifiers.get(mapping.data_path)
+                                    if mod and mapping.sub_data_path:
+                                        mod.keyframe_insert(data_path=mapping.sub_data_path)
         # Cancel on ESC
         if event.type == "ESC":
             print("Cancelling gamepad controller...")
@@ -93,7 +116,7 @@ class FG_OT_StartController(bpy.types.Operator):
     def execute(self, context):
         fastgamepad.init()
         wm = context.window_manager
-        fps = context.scene.controller_fps
+        fps = context.scene.johnnygizmo_puppetstrings_settings.controller_fps
         interval = 1.0 / fps if fps > 0 else 0.03
         self._timer = wm.event_timer_add(interval, window=context.window)
         wm.modal_handler_add(self)
@@ -105,42 +128,15 @@ class FG_OT_StartController(bpy.types.Operator):
         if self._timer:
             wm.event_timer_remove(self._timer)
         fastgamepad.quit()
-        context.scene.controller_running = False
+        context.scene.johnnygizmo_puppetstrings_settings.controller_running = False
         # print("Gamepad polling cancelled.")
 
 
 def register():
     bpy.utils.register_class(FG_OT_StartController)
-    # Add custom properties to store joystick values
-    bpy.types.Scene.fg_lx = bpy.props.FloatProperty()
-    bpy.types.Scene.fg_ly = bpy.props.FloatProperty()
-    bpy.types.Scene.fg_rx = bpy.props.FloatProperty()
-    bpy.types.Scene.fg_ry = bpy.props.FloatProperty()
-    bpy.types.Scene.fg_a = bpy.props.FloatProperty()
-    bpy.types.Scene.controller_fps = bpy.props.FloatProperty(
-        name="Controller FPS",
-        description="Polling rate for gamepad controller",
-        default=33.0,
-        min=1.0,
-        max=240.0
-    )
-    bpy.types.Scene.keyframe_interval = bpy.props.IntProperty(
-        name="Keyframe Interval",
-        description="Interval between keyframes",
-        default=1,
-        min=1,
-        max=240
-    )
 
 def unregister():
     bpy.utils.unregister_class(FG_OT_StartController)
-    del bpy.types.Scene.fg_lx
-    del bpy.types.Scene.fg_ly
-    del bpy.types.Scene.fg_rx
-    del bpy.types.Scene.fg_ry
-    del bpy.types.Scene.fg_a
-    del bpy.types.Scene.controller_fps
-    del bpy.types.Scene.keyframe_interval
 
 
 if __name__ == "__main__":

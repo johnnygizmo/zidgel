@@ -13,22 +13,28 @@ class FG_PT_MappingSetsPanel(bpy.types.Panel):
 
         layout.operator("fg.start_controller", text="Start Controller", icon="PLAY")
        
-        if scene.controller_running:
+        if scene.johnnygizmo_puppetstrings_settings.enable_record:
+            layout.prop(context.scene.johnnygizmo_puppetstrings_settings, "enable_record",text="Recording Armed", icon="RECORD_ON")
+        else:
+            layout.prop(context.scene.johnnygizmo_puppetstrings_settings, "enable_record",text="Recording Disarmed", icon="RECORD_OFF")
+
+
+        if scene.johnnygizmo_puppetstrings_settings.controller_running:
             layout.label(text="Controller Running: Press ESC to cancel", icon="CANCEL")
        
         layout.label(text="Select Mapping Set:")
         row = layout.row()
         row.template_list(
             "FG_UL_MappingSetList", "", 
-            scene, "mapping_sets", 
-            scene, "active_mapping_set"
+            scene, "johnnygizmo_puppetstrings_mapping_sets", 
+            scene, "johnnygizmo_puppetstrings_active_mapping_set"
         )
         col = row.column(align=True)
         col.operator("fg.add_mapping_set", icon='ADD', text="")
         col.operator("fg.remove_mapping_set", icon='REMOVE', text="")
         
-        layout.prop(context.scene, "controller_fps")
-        layout.prop(context.scene, "keyframe_interval")
+        layout.prop(context.scene.johnnygizmo_puppetstrings_settings, "controller_fps")
+        layout.prop(context.scene.johnnygizmo_puppetstrings_settings, "keyframe_interval")
 
 class FG_PT_ButtonMappingsPanel(bpy.types.Panel):
     bl_label = "Button Mappings"
@@ -40,10 +46,10 @@ class FG_PT_ButtonMappingsPanel(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         scene = context.scene
-        if len(scene.mapping_sets) == 0:
+        if len(scene.johnnygizmo_puppetstrings_mapping_sets) == 0:
             layout.label(text="No mapping sets defined.")
             return
-        ms = scene.mapping_sets[scene.active_mapping_set]
+        ms = scene.johnnygizmo_puppetstrings_mapping_sets[scene.johnnygizmo_puppetstrings_active_mapping_set]
         layout.label(text=f"Mappings for: {ms.name}")
         row = layout.row()
         row.template_list(
@@ -85,7 +91,7 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
             #layout.prop(bm, "invert", icon="ARROW_LEFTRIGHT", text="")
 
             #layout.prop(bm, "scale", text="")
-            row.prop(bm, "object", text="")
+            row.prop_search(bm, "object", bpy.data, "objects", text="")
             row = col.row(align=True)
             row.separator(factor=3)
             row.prop(bm, "mapping_type", text="")
@@ -99,6 +105,13 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
                     row.prop_search(bm, "data_path", text="", search_data=ob.data.shape_keys, search_property="key_blocks")
                 else:
                     row.prop(bm, "data_path", text="")
+            elif bm.mapping_type == "modifier":
+                ob = bpy.data.objects.get(bm.object)
+                if ob:
+                    row.prop_search(bm, "data_path", text="", search_data=ob, search_property="modifiers")
+                    mod = ob.modifiers.get(bm.data_path)
+                    if mod:
+                        row.prop(bm, "sub_data_path", text="")
             else:
                 row.prop(bm, "data_path", text="")
             row = col.row(align=True)
@@ -116,25 +129,25 @@ class FG_OT_AddMappingSet(bpy.types.Operator):
     bl_idname = "fg.add_mapping_set"
     bl_label = "Add Mapping Set"
     def execute(self, context):
-        context.scene.mapping_sets.add()
+        context.scene.johnnygizmo_puppetstrings_mapping_sets.add()
         return {'FINISHED'}
 
 class FG_OT_RemoveMappingSet(bpy.types.Operator):
     bl_idname = "fg.remove_mapping_set"
     bl_label = "Remove Mapping Set"
     def execute(self, context):
-        idx = context.scene.active_mapping_set
-        sets = context.scene.mapping_sets
+        idx = context.scene.johnnygizmo_puppetstrings_active_mapping_set
+        sets = context.scene.johnnygizmo_puppetstrings_mapping_sets
         if sets and 0 <= idx < len(sets):
             sets.remove(idx)
-            context.scene.active_mapping_set = max(0, idx-1)
+            context.scene.johnnygizmo_puppetstrings_active_mapping_set = max(0, idx-1)
         return {'FINISHED'}
 
 class FG_OT_AddButtonMapping(bpy.types.Operator):
     bl_idname = "fg.add_button_mapping"
     bl_label = "Add Button Mapping"
     def execute(self, context):
-        ms = context.scene.mapping_sets[context.scene.active_mapping_set]
+        ms = context.scene.johnnygizmo_puppetstrings_mapping_sets[context.scene.johnnygizmo_puppetstrings_active_mapping_set]
         ms.button_mappings.add()
         return {'FINISHED'}
 
@@ -142,7 +155,7 @@ class FG_OT_RemoveButtonMapping(bpy.types.Operator):
     bl_idname = "fg.remove_button_mapping"
     bl_label = "Remove Button Mapping"
     def execute(self, context):
-        ms = context.scene.mapping_sets[context.scene.active_mapping_set]
+        ms = context.scene.johnnygizmo_puppetstrings_mapping_sets[context.scene.johnnygizmo_puppetstrings_active_mapping_set]
         idx = ms.active_button_mapping_index
         if ms.button_mappings and 0 <= idx < len(ms.button_mappings):
             ms.button_mappings.remove(idx)
@@ -159,15 +172,14 @@ def register():
     bpy.utils.register_class(FG_OT_RemoveMappingSet)
     bpy.utils.register_class(FG_OT_AddButtonMapping)
     bpy.utils.register_class(FG_OT_RemoveButtonMapping)
-    bpy.types.Scene.controller_running = bpy.props.BoolProperty(name="Controller Running", default=False)
-
+   
 def unregister():
+    bpy.utils.unregister_class(FG_OT_RemoveButtonMapping)
+    bpy.utils.unregister_class(FG_OT_AddButtonMapping)
+    bpy.utils.unregister_class(FG_OT_RemoveMappingSet)
+    bpy.utils.unregister_class(FG_OT_AddMappingSet)
     bpy.utils.unregister_class(FG_PT_ButtonMappingsPanel)
     bpy.utils.unregister_class(FG_PT_MappingSetsPanel)
     bpy.utils.unregister_class(FG_UL_ButtonMappingList)
     bpy.utils.unregister_class(FG_UL_MappingSetList)
-    bpy.utils.unregister_class(FG_OT_AddMappingSet)
-    bpy.utils.unregister_class(FG_OT_RemoveMappingSet)
-    bpy.utils.unregister_class(FG_OT_AddButtonMapping)
-    bpy.utils.unregister_class(FG_OT_RemoveButtonMapping)
 

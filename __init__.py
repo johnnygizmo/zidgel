@@ -11,20 +11,20 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+from . import settings
 from . import controller
 from . import panel
 from . import mapping_data
 
 
-
-
-
 def register(): 
+    settings.register()
+    mapping_data.register()
     controller.register()
     panel.register()
-    mapping_data.register()
 
 def unregister(): 
-    controller.unregister()
     panel.unregister()
+    controller.unregister()
     mapping_data.unregister()
+    settings.unregister() 
