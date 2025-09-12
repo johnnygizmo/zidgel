@@ -10,18 +10,48 @@ class FG_PT_MappingSetsPanel(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         scene = context.scene
+        settings  = scene.johnnygizmo_puppetstrings_settings
+        layout.operator("fg.start_controller", text="Enable Controller", icon="PLUGIN")
 
-        layout.operator("fg.start_controller", text="Start Controller", icon="PLAY")
-       
-        if scene.johnnygizmo_puppetstrings_settings.enable_record:
-            layout.prop(context.scene.johnnygizmo_puppetstrings_settings, "enable_record",text="Recording Armed", icon="RECORD_ON")
+        if settings.enable_record:
+            layout.prop(settings, "enable_record",text="Recording Armed", icon="RECORD_ON")
         else:
-            layout.prop(context.scene.johnnygizmo_puppetstrings_settings, "enable_record",text="Recording Disarmed", icon="RECORD_OFF")
+            layout.prop(settings, "enable_record",text="Recording Disarmed", icon="RECORD_OFF")
 
 
-        if scene.johnnygizmo_puppetstrings_settings.controller_running:
+        if settings.controller_running:
             layout.label(text="Controller Running: Press ESC to cancel", icon="CANCEL")
        
+        
+
+        # Timeline marker dropdowns for punch in/out
+        row = layout.row()
+        if settings.use_punch:
+            row.prop(context.scene.johnnygizmo_puppetstrings_settings, "use_punch", text="", icon="KEYTYPE_JITTER_VEC")
+        else:
+            row.prop(context.scene.johnnygizmo_puppetstrings_settings, "use_punch", text="",icon="HANDLETYPE_FREE_VEC")
+
+        row.prop_search(context.scene.johnnygizmo_puppetstrings_settings, "punch_in_marker", context.scene, "timeline_markers", text="In", icon='IMPORT')
+        row.prop_search(context.scene.johnnygizmo_puppetstrings_settings, "punch_out_marker", context.scene, "timeline_markers", text="Out", icon='EXPORT')
+
+        row.prop(context.scene.johnnygizmo_puppetstrings_settings, "pre_roll")
+        # row.prop(context.scene.johnnygizmo_puppetstrings_settings, "punch_in")
+        # row.prop(context.scene.johnnygizmo_puppetstrings_settings, "punch_out")
+
+        row = layout.row()
+        row.prop(context.scene.johnnygizmo_puppetstrings_settings, "one_shot", text="One Pass")
+        
+
+        row = layout.row()
+        row.operator("puppetstrings.playback", text="Play", icon="PLAY").action = "PLAY"
+
+
+
+        row = layout.row()
+        row.prop(context.scene.johnnygizmo_puppetstrings_settings, "controller_fps")
+        row.prop(context.scene.johnnygizmo_puppetstrings_settings, "keyframe_interval")
+
+
         layout.label(text="Select Mapping Set:")
         row = layout.row()
         row.template_list(
@@ -32,20 +62,6 @@ class FG_PT_MappingSetsPanel(bpy.types.Panel):
         col = row.column(align=True)
         col.operator("fg.add_mapping_set", icon='ADD', text="")
         col.operator("fg.remove_mapping_set", icon='REMOVE', text="")
-        
-        layout.prop(context.scene.johnnygizmo_puppetstrings_settings, "controller_fps")
-        layout.prop(context.scene.johnnygizmo_puppetstrings_settings, "keyframe_interval")
-
-        row = layout.row()
-        row.prop(context.scene.johnnygizmo_puppetstrings_settings, "pre_roll")
-        row.prop(context.scene.johnnygizmo_puppetstrings_settings, "punch_in")
-        row.prop(context.scene.johnnygizmo_puppetstrings_settings, "punch_out")
-        
-        row = layout.row()
-        row.prop(context.scene.johnnygizmo_puppetstrings_settings, "one_shot", text="One Pass")
-        row.prop(context.scene.johnnygizmo_puppetstrings_settings, "use_punch")
-
-
 
 class FG_PT_ButtonMappingsPanel(bpy.types.Panel):
     bl_label = "Button Mappings"

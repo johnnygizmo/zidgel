@@ -28,24 +28,55 @@ class FG_OT_StartController(bpy.types.Operator):
     bl_label = "Start Gamepad Controller"
 
     _timer = None
+    _punch_in = None
+    _punch_out = None
+    _pre_roll = 0
 
     def modal(self, context, event):
         scene = context.scene
         settings = scene.johnnygizmo_puppetstrings_settings
+        
+        punch_in_marker = getattr(settings, "punch_in_marker","")
+        punch_out_marker = getattr(settings, "punch_out_marker","")        
+        punch_in = scene.timing_markers.get(punch_in_marker, None)
+        punch_out = scene.timing_markers.get(punch_out_marker, None)
+        
+        
+        if punch_in:
+            self._punch_in = punch_in.frame
+        else:
+            self._punch_in = scene.frame_start
+        if punch_out:
+            self._punch_out = punch_out.frame
+        else:
+            self._punch_out = scene.frame_end
+
+        print(f"Punch in at frame {self._punch_in}, punch out at frame {self._punch_out}.")
+
+
         if event.type == "TIMER":
             axes = fastgamepad.get_axes()
             buttons = fastgamepad.get_buttons()
 
-            if buttons.get("start", 0) == 1:                
-                bpy.ops.fg.play_with_punch()
+            if axes == None:
+                axes = {}
+            if buttons == None:
+                buttons = {}
+
+
+            if buttons.get("start", 0) == 1:
+                bpy.ops.PuppetStrings_OT_PlayWithPunch(action="PLAY")
             
-            if settings.punch_in == scene.frame_current and settings.enable_record == False:
+            if self._punch_in == scene.frame_current and not settings.enable_record:
                 if settings.use_punch:
                     settings.enable_record = True 
 
-            if settings.punch_out == scene.frame_current and settings.enable_record == True:
+            if self._punch_out == scene.frame_current and settings.enable_record:
                 if settings.use_punch:
                     settings.enable_record = False
+
+            if settings.use_punch and scene.frame_current > self._punch_out+self._pre_roll:
+                bpy.ops.PuppetStrings_OT_PlayWithPunch(action="STOP")
 
             if settings.one_shot and  scene.frame_current == scene.end_frame:
                 bpy.ops.screen.animation_cancel()
@@ -138,14 +169,19 @@ class FG_OT_StartController(bpy.types.Operator):
         return {"PASS_THROUGH"}
 
     def execute(self, context):
-        fastgamepad.init()
+        
+        try:
+            fastgamepad.init()
+        except Exception as e:
+            print(f"Error initializing gamepad: {e}")
+
+
         wm = context.window_manager
         fps = context.scene.johnnygizmo_puppetstrings_settings.controller_fps
         interval = 1.0 / fps if fps > 0 else 0.03
         self._timer = wm.event_timer_add(interval, window=context.window)
         wm.modal_handler_add(self)
-        context.scene.controller_running = True
-        return {"RUNNING_MODAL"}
+        context.scene.johnnygizmo_puppetstrings_settings.controller_running = True
 
     def cancel(self, context):
         wm = context.window_manager
