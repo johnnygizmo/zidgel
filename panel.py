@@ -11,18 +11,16 @@ class FG_PT_MappingSetsPanel(bpy.types.Panel):
         layout = self.layout
         scene = context.scene
         settings  = scene.johnnygizmo_puppetstrings_settings
-        layout.operator("fg.start_controller", text="Enable Controller", icon="PLUGIN")
+        if not settings.controller_running:
+            layout.operator("fg.start_controller", text="Enable Controller", icon="STRIP_COLOR_01")
+        else:
+            layout.operator("fg.start_controller", text="Controller Running (esc to stop)", icon="STRIP_COLOR_04")
 
         if settings.enable_record:
             layout.prop(settings, "enable_record",text="Recording Armed", icon="RECORD_ON")
         else:
             layout.prop(settings, "enable_record",text="Recording Disarmed", icon="RECORD_OFF")
 
-
-        if settings.controller_running:
-            layout.label(text="Controller Running: Press ESC to cancel", icon="CANCEL")
-       
-        
 
         # Timeline marker dropdowns for punch in/out
         row = layout.row()
@@ -41,11 +39,8 @@ class FG_PT_MappingSetsPanel(bpy.types.Panel):
         row = layout.row()
         row.prop(context.scene.johnnygizmo_puppetstrings_settings, "one_shot", text="One Pass")
         
-
         row = layout.row()
         row.operator("puppetstrings.playback", text="Play", icon="PLAY").action = "PLAY"
-
-
 
         row = layout.row()
         row.prop(context.scene.johnnygizmo_puppetstrings_settings, "controller_fps")
