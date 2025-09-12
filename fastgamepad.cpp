@@ -13,6 +13,7 @@ struct DebounceState {
     Uint64 lastChangeTime = 0; // time of last raw change
 };
 
+
 static SDL_Gamepad* gamepad = nullptr;
 static EMAState axisEMA[6];   // lx, ly, rx, ry, lt, rt
 static double emaAlpha = 0.2; // default smoothing factor
@@ -86,18 +87,36 @@ static PyObject* fg_set_debounce(PyObject* self, PyObject* args) {
 
 // Init SDL and open the first gamepad
 static PyObject* fg_init(PyObject* self, PyObject* args) {
-    if (!SDL_Init(SDL_INIT_GAMEPAD)) {
+    if (SDL_Init(SDL_INIT_GAMEPAD) != 0) {
         return PyErr_Format(PyExc_RuntimeError, "SDL_Init failed: %s", SDL_GetError());
     }
-    // int num = SDL_GetNumGamepads();
-    int num;
+
+    int num = 0;
     SDL_JoystickID* ids = SDL_GetGamepads(&num);
+
     if (num < 1) {
-        return PyErr_Format(PyExc_RuntimeError, "No gamepads found");
+        // No gamepads found, create a virtual joystick
+        SDL_VirtualJoystickDesc desc = {0};
+        desc.name = "Virtual Gamepad";
+        desc.type = SDL_JOYSTICK_TYPE_GAMEPAD;
+        SDL_JoystickID vjoy_id = SDL_AttachVirtualJoystick(&desc);
+        if (vjoy_id == 0) {
+            SDL_Quit();
+            return PyErr_Format(PyExc_RuntimeError, "Failed to create virtual joystick: %s", SDL_GetError());
+        }
+        // Get the updated list of gamepads (should include the virtual one)
+        if (ids) SDL_free(ids);
+        ids = SDL_GetGamepads(&num);
+        if (num < 1) {
+            SDL_Quit();
+            return PyErr_Format(PyExc_RuntimeError, "Virtual joystick not found after creation");
+        }
     }
+
     gamepad = SDL_OpenGamepad(ids[0]);
     SDL_free(ids);
     if (!gamepad) {
+        SDL_Quit();
         return PyErr_Format(PyExc_RuntimeError, "Failed to open gamepad: %s", SDL_GetError());
     }
     Py_RETURN_NONE;
