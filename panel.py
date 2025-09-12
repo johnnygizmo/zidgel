@@ -36,6 +36,17 @@ class FG_PT_MappingSetsPanel(bpy.types.Panel):
         layout.prop(context.scene.johnnygizmo_puppetstrings_settings, "controller_fps")
         layout.prop(context.scene.johnnygizmo_puppetstrings_settings, "keyframe_interval")
 
+        row = layout.row()
+        row.prop(context.scene.johnnygizmo_puppetstrings_settings, "pre_roll")
+        row.prop(context.scene.johnnygizmo_puppetstrings_settings, "punch_in")
+        row.prop(context.scene.johnnygizmo_puppetstrings_settings, "punch_out")
+        
+        row = layout.row()
+        row.prop(context.scene.johnnygizmo_puppetstrings_settings, "one_shot", text="One Pass")
+        row.prop(context.scene.johnnygizmo_puppetstrings_settings, "use_punch")
+
+
+
 class FG_PT_ButtonMappingsPanel(bpy.types.Panel):
     bl_label = "Button Mappings"
     bl_idname = "FG_PT_button_mappings"

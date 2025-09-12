@@ -31,15 +31,30 @@ class FG_OT_StartController(bpy.types.Operator):
 
     def modal(self, context, event):
         scene = context.scene
+        settings = scene.johnnygizmo_puppetstrings_settings
         if event.type == "TIMER":
             axes = fastgamepad.get_axes()
             buttons = fastgamepad.get_buttons()
+
+            if buttons.get("start", 0) == 1:                
+                bpy.ops.fg.play_with_punch()
+            
+            if settings.punch_in == scene.frame_current and settings.enable_record == False:
+                if settings.use_punch:
+                    settings.enable_record = True 
+
+            if settings.punch_out == scene.frame_current and settings.enable_record == True:
+                if settings.use_punch:
+                    settings.enable_record = False
+
+            if settings.one_shot and  scene.frame_current == scene.end_frame:
+                bpy.ops.screen.animation_cancel()
             # combine axes and buttons into one dictionary
             combined = {**axes, **buttons}
             # print(combined)
 
             ob = bpy.context.active_object
-            mapping_sets = context.scene.mapping_sets
+            mapping_sets = context.scene.johnnygizmo_puppetstrings_mapping_sets
             active_mapping_set = None
             if len(mapping_sets) > 0:
                 active_mapping_set = mapping_sets[context.scene.johnnygizmo_puppetstrings_active_mapping_set]
@@ -69,22 +84,29 @@ class FG_OT_StartController(bpy.types.Operator):
                         command = "ob.scale." + mapping.axis + command
                     elif mapping.mapping_type == "shape_key":
                         if ob.data.shape_keys:
-                            command = "ob.data.shape_keys.key_blocks[\"" + mapping.data_path + "\"].value" + command
+                            if ob.data.shape_keys.key_blocks.get(mapping.data_path):
+                                command = "ob.data.shape_keys.key_blocks[\"" + mapping.data_path + "\"].value" + command
+                            else:
+                                continue
                         else:
                             continue
                     elif mapping.mapping_type == "modifier":
                         if ob and ob.modifiers:
                             mod = ob.modifiers.get(mapping.data_path)
                             if mod and mapping.sub_data_path:
-                                command = "mod" + mapping.sub_data_path + command
+                                command = "ob.modifiers[\"" + mapping.data_path + "\"]" + mapping.sub_data_path + command
                             else:
                                 continue
                         else:
                             continue
                     else:
                         command = "ob." + mapping.data_path + " = " + str(value)
-                    
+                   
                     exec(command)
+
+
+
+
 
                     if context.scene.johnnygizmo_puppetstrings_settings.enable_record:
                         if(context.scene.frame_current % context.scene.johnnygizmo_puppetstrings_settings.keyframe_interval) == 0:
@@ -105,6 +127,8 @@ class FG_OT_StartController(bpy.types.Operator):
                                     mod = ob.modifiers.get(mapping.data_path)
                                     if mod and mapping.sub_data_path:
                                         mod.keyframe_insert(data_path=mapping.sub_data_path)
+            if context.scene.frame_current == context.scene.frame_end:
+                bpy.ops.screen.animation_cancel() 
         # Cancel on ESC
         if event.type == "ESC":
             print("Cancelling gamepad controller...")

@@ -15,11 +15,13 @@ from . import settings
 from . import controller
 from . import panel
 from . import mapping_data
+from . import playback
 
 
 def register(): 
     settings.register()
     mapping_data.register()
+    playback.register()
     controller.register()
     panel.register()
 
@@ -27,4 +29,5 @@ def unregister():
     panel.unregister()
     controller.unregister()
     mapping_data.unregister()
+    playback.unregister()
     settings.unregister() 
