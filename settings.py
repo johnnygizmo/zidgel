@@ -1,5 +1,5 @@
 import bpy
-
+import fastgamepad
 
 class JOHNNYGIZMO_PuppetStringsSettings(bpy.types.PropertyGroup):
     controller_fps: bpy.props.FloatProperty(
@@ -21,21 +21,15 @@ class JOHNNYGIZMO_PuppetStringsSettings(bpy.types.PropertyGroup):
     )  # type: ignore
 
     controller_running: bpy.props.BoolProperty(
-        name="Controller Running",
-        default=False
-    )   # type: ignore
+        name="Controller Running", default=False
+    )  # type: ignore
     punch_in_marker: bpy.props.StringProperty(
-        name="Punch In Marker",
-        description="Timeline marker to punch in",
-        default=""
+        name="Punch In Marker", description="Timeline marker to punch in", default=""
     )  # type: ignore
     punch_out_marker: bpy.props.StringProperty(
-        name="Punch Out Marker",
-        description="Timeline marker to punch out",
-        default=""
+        name="Punch Out Marker", description="Timeline marker to punch out", default=""
     )  # type: ignore
-    
-    
+
     pre_roll: bpy.props.IntProperty(
         name="Pre Roll",
         description="Number of frames to wait before starting recording",
@@ -66,6 +60,36 @@ class JOHNNYGIZMO_PuppetStringsSettings(bpy.types.PropertyGroup):
     use_punch: bpy.props.BoolProperty(
         name="Use Punch", description="Use punch in and punch out frames", default=False
     )  # type: ignore
+
+    def update_smoothing(self, context):
+        import fastgamepad
+        if fastgamepad.initialized():
+            fastgamepad.set_smoothing(self.smoothing)
+    def update_debounce(self, context):
+        import fastgamepad
+        if fastgamepad.initialized():
+            fastgamepad.set_debounce(self.debounce_time)
+
+
+    smoothing: bpy.props.IntProperty(
+        name="Smoothing ms",
+        description="Smoothing factor for input values",
+        default=150,
+        update=update_smoothing,
+    ) # type: ignore
+    debounce_time: bpy.props.IntProperty(
+        name="Debounce Time ms",
+        description="Debounce time for button presses",
+        default=50,
+        update=update_debounce,
+    ) # type: ignore
+
+    keyframes_muted: bpy.props.BoolProperty(
+        name="Keyframes Muted",
+        description="Mute all keyframes created by Puppet Strings",
+        default=False,
+    )  # type: ignore
+    
 
 
 def register():

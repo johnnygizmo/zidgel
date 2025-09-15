@@ -7,9 +7,19 @@ MAPPING_TARGETS = [
     ("object", "Object", "Map to Object Properties"),
 
 ]
-
+INPUT_EASING = [
+    ("linear", "Linear", "Linear response"),
+    ("x2", "X^2", "Quadratic response"),
+    ("x3", "X^3", "Cubic response"),
+    ("sqrt", "Sqrt", "Square root response"),
+    ("cubet", "Cubert", "Cube root response"),
+    ("sin", "Sine", "Smooth S-shaped response"),
+    ("log", "Logarithmic", "Fast at start then slow later"),
+    ("smoothstep", "Smoothstep", "Smoothstep function response"),
+]
 MAPPING_OPS = [
     ("value", "Direct Value", "Use the button/axis value directly"),
+    ("curve","Curve","Use a curve to define conversion"),
     ("invertb", "Inverted Button Value (1 - value)", "Use the inverted button value (1 - value)"),
     ("inverta", "Inverted Axis Value (-value)", "Use the inverted axis value (-value)"),
     ("expression", "AssignmentExpression", "Use a Python expression to modify the button/axis value"),
@@ -69,6 +79,11 @@ GAMEPAD_BUTTONS = [
 ]
 
 class ButtonMapping(bpy.types.PropertyGroup):
+    show_panel: bpy.props.BoolProperty(
+        name="Show Panel",
+        default=True
+    ) # type: ignore
+    
     target: bpy.props.EnumProperty(
         name="Target",
         items=MAPPING_TARGETS,
@@ -96,6 +111,12 @@ class ButtonMapping(bpy.types.PropertyGroup):
         items=MAPPING_TYPES,
         description="Type of mapping"
     ) # type: ignore
+    input_easing: bpy.props.EnumProperty(
+        name="Input Easing",
+        items=INPUT_EASING,
+        description="Easing function to apply to input value",
+        default="linear"
+    ) # type: ignore
     scale: bpy.props.FloatProperty(name="Scale", default=1.0) # type: ignore
 
     axis: bpy.props.EnumProperty(
@@ -105,6 +126,7 @@ class ButtonMapping(bpy.types.PropertyGroup):
     ) # type: ignore
     data_path: bpy.props.StringProperty(name="Data Path") # type: ignore
     sub_data_path: bpy.props.StringProperty(name="Sub Data Path") # type: ignore
+    curve_owner: bpy.props.PointerProperty(type=bpy.types.Brush)
 
 class MappingSet(bpy.types.PropertyGroup):
     active: bpy.props.BoolProperty(name="Enabled", default=True) # type: ignore

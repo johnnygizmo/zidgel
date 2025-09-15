@@ -3,9 +3,9 @@ schema_version = "1.0.0"
 # Example of manifest file for a Blender extension
 # Change the values according to your extension
 id = "puppetstrings"
-version = "1.0.0"
+version = "1.0.1"
 name = "Puppetstrings"
-tagline = "This is another extension"
+tagline = "Gamepad driven animation recording for Blender"
 maintainer = "Johnny Matthews"
 # Supported types: "add-on", "theme"
 type = "add-on"

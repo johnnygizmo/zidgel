@@ -1,5 +1,7 @@
 import bpy
 
+import fastgamepad
+
 class PuppetStrings_OT_PlayWithPunch(bpy.types.Operator):
     bl_idname = "puppetstrings.playback"
     bl_label = "Playback functions"
@@ -21,6 +23,10 @@ class PuppetStrings_OT_PlayWithPunch(bpy.types.Operator):
         settings = scene.johnnygizmo_puppetstrings_settings
 
         if self.action == "PLAY":
+            if fastgamepad.initialized():
+                fastgamepad.set_smoothing(settings.smoothing)
+                print(fastgamepad.set_debounce(settings.debounce_time))
+
             if screen.is_animation_playing:
                 return {'CANCELLED'}
         
@@ -49,10 +55,8 @@ class PuppetStrings_OT_PlayWithPunch(bpy.types.Operator):
         elif self.action == "STOP":
             if not screen.is_animation_playing:
                 return {'CANCELLED'}
-            bpy.ops.screen.animation_cancel()
-            
+            bpy.ops.screen.animation_cancel()            
             return {'FINISHED'}
-
         else :
             print("Unknown action")
             return {'CANCELLED'}

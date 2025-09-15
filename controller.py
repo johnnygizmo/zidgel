@@ -10,6 +10,7 @@ from multiprocessing import context
 import bpy
 import sys
 import os
+import math
 from pathlib import Path
 
 extension_dir = Path(__file__).parent
@@ -18,7 +19,7 @@ if str(extension_dir) not in sys.path:
 if hasattr(os, 'add_dll_directory') and os.name == 'nt':
     os.add_dll_directory(str(extension_dir))
 
-import fastgamepad
+from . import fastgamepad
 from . import mapping_data
 
 class FG_OT_StartController(bpy.types.Operator):
@@ -32,50 +33,26 @@ class FG_OT_StartController(bpy.types.Operator):
     _punch_out = None
     _pre_roll = 0
 
+    action: bpy.props.EnumProperty(
+        name="Action",
+        description="Action to perform",
+        default="START",
+        items=[
+            ("START", "Start", "Start the gamepad controller"),
+            ("STOP", "Stop", "Stop the gamepad controller"),
+        ],) # type: ignore
+
     def modal(self, context, event):
         scene = context.scene
         settings = scene.johnnygizmo_puppetstrings_settings
-        punch_in_marker = getattr(settings, "punch_in_marker","")
-        punch_out_marker = getattr(settings, "punch_out_marker","")        
-        punch_in = scene.timeline_markers.get(punch_in_marker, None)
-        punch_out = scene.timeline_markers.get(punch_out_marker, None)
-                
-        self._pre_roll = settings.pre_roll
-        if punch_in:
-            self._punch_in = punch_in.frame
-        else:
-            self._punch_in = scene.frame_start
-        if punch_out:
-            self._punch_out = punch_out.frame
-        else:
-            self._punch_out = scene.frame_end
-
         settings.controller_running = fastgamepad.initialized()
+        if not settings.controller_running:
+            self.cancel(context)
+            return {"CANCELLED"}
 
         if event.type == "TIMER":
             axes = fastgamepad.get_axes()
             buttons = fastgamepad.get_buttons()
-
-            if buttons.get("start", 0) == 1:
-                bpy.ops.PuppetStrings_OT_PlayWithPunch(action="PLAY")
-            
-            if self._punch_in == scene.frame_current and not settings.enable_record:
-                if settings.use_punch:
-                    settings.enable_record = True 
-
-            if self._punch_out == scene.frame_current and settings.enable_record:
-                if settings.use_punch:
-                    settings.enable_record = False
-
-            #print(str(self._punch_out)  +" " + str(scene.frame_current) + " " + str(self._pre_roll))
-            if settings.use_punch and scene.frame_current > self._punch_out + self._pre_roll:
-                bpy.ops.puppetstrings.playback(action="STOP")
-
-            # if settings.one_shot and  scene.frame_current == scene.end_frame:
-            #     bpy.ops.screen.animation_cancel()
-            # combine axes and buttons into one dictionary
-            combined = {**axes, **buttons}
-            # print(combined)
 
             ob = bpy.context.active_object
             mapping_sets = context.scene.johnnygizmo_puppetstrings_mapping_sets
@@ -83,16 +60,54 @@ class FG_OT_StartController(bpy.types.Operator):
             if len(mapping_sets) > 0:
                 active_mapping_set = mapping_sets[context.scene.johnnygizmo_puppetstrings_active_mapping_set]
 
+            if buttons.get("start", 0) == 1:
+                if not context.screen.is_animation_playing:
+                    bpy.ops.puppetstrings.playback(action="PLAY")
+                        
+            if buttons.get("back", 0) == 1:
+                if context.screen.is_animation_playing:
+                    bpy.ops.puppetstrings.playback(action="STOP")
+                    return {"PASS_THROUGH"}
+                else:
+                    scene.frame_current = scene.frame_start
+                    return {"PASS_THROUGH"}
+                
+            combined = {**axes, **buttons}            
+
             if ob and active_mapping_set and active_mapping_set.active :
                 for mapping in active_mapping_set.button_mappings:
                     if not mapping.enabled or mapping.object == "":
                         continue
                     
                     op = mapping.operation
-                    value = combined.get(mapping.button)                    
+                    value = combined.get(mapping.button) 
+                    if mapping.input_easing == "linear":
+                        pass
+                    elif mapping.input_easing == "x2":
+                        value = value**2 * (1 if value >= 0 else -1)
+                    elif mapping.input_easing == "x3":
+                        value = value**3
+                    elif mapping.input_easing == "sqrt":
+                        value = math.sqrt(math.fabs(value)) * (1 if value >= 0 else -1)
+                    elif mapping.input_easing == "cubet":
+                        value = math.pow(math.fabs(value),.333) * (1 if value >= 0 else -1)
+                    elif mapping.input_easing == "sin":
+                        value = math.sin(value * math.pi / 2)
+                    elif mapping.input_easing == "log":
+                        if value == 0:
+                            value = 0
+                        else:
+                            value = math.copysign(math.log1p(math.fabs(value) * (math.e - 1)), value)
+                    elif mapping.input_easing == "smoothstep":
+                        x = (value + 1) / 2
+                        s = 3*x * x - 2 * x * x * x
+                        value = 2 * s -1
                     ob = bpy.data.objects.get(mapping.object)
 
                     command = " = " + str(value)
+                    if mapping.operation == "curve":
+                        mapped = mapping.curve_owner.curve.evaluate(mapping.curve_owner.curve.curves[0],value)
+                        command = " = " + str(round(mapped,6))
                     if mapping.operation == "expression":
                         command = mapping.expression
                     elif mapping.operation == "invertb":
@@ -124,19 +139,18 @@ class FG_OT_StartController(bpy.types.Operator):
                         else:
                             continue
                     else:
-                        command = "ob." + mapping.data_path + " = " + str(value)
-                   
-                    exec(command)
+                        command = "ob." + mapping.data_path + " = " + str(value)                               
+                    
+                    try:
+                        exec(command)
+                    except Exception as e:
+                        pass
 
-
-
-
-
-                    if context.scene.johnnygizmo_puppetstrings_settings.enable_record:
+                    if context.scene.johnnygizmo_puppetstrings_settings.enable_record and context.screen.is_animation_playing:
                         if(context.scene.frame_current % context.scene.johnnygizmo_puppetstrings_settings.keyframe_interval) == 0:
                             index_map = {"x": 0, "y": 1, "z": 2}
                             if mapping.mapping_type == "location":
-                                ob.keyframe_insert(data_path="location", index=index_map.get(mapping.data_path, -1))
+                                ob.keyframe_insert(data_path="location", index=index_map.get(mapping.data_path, -1))                              
                             elif mapping.mapping_type == "rotation_euler":
                                 ob.keyframe_insert(data_path="rotation_euler", index=index_map.get(mapping.data_path, -1))
                             elif mapping.mapping_type == "scale":
@@ -151,27 +165,31 @@ class FG_OT_StartController(bpy.types.Operator):
                                     mod = ob.modifiers.get(mapping.data_path)
                                     if mod and mapping.sub_data_path:
                                         mod.keyframe_insert(data_path=mapping.sub_data_path)
-            if context.scene.frame_current == context.scene.frame_end:
-                bpy.ops.screen.animation_cancel() 
+
         # Cancel on ESC
         if event.type == "ESC":
             settings.controller_running = False
-
             print("Cancelling gamepad controller...")
             self.cancel(context)
             return {"CANCELLED"}
-
         return {"PASS_THROUGH"}
 
-    def execute(self, context):        
-        fastgamepad.init()
-        wm = context.window_manager
-        fps = context.scene.johnnygizmo_puppetstrings_settings.controller_fps
-        interval = 1.0 / fps if fps > 0 else 0.03
-        self._timer = wm.event_timer_add(interval, window=context.window)
-        wm.modal_handler_add(self)
-        context.scene.johnnygizmo_puppetstrings_settings.controller_running = True
-        return {"RUNNING_MODAL"}
+    def execute(self, context):   
+        if self.action == "STOP":               
+            print("Stopping gamepad controller...")         
+            self.cancel(context)
+            return {"FINISHED"}
+        else:
+            print("Starting gamepad controller...")
+            fastgamepad.init()
+            fastgamepad.set_smoothing(context.scene.johnnygizmo_puppetstrings_settings.smoothing)
+            wm = context.window_manager
+            fps = context.scene.johnnygizmo_puppetstrings_settings.controller_fps
+            interval = 1.0 / fps if fps > 0 else 0.03
+            self._timer = wm.event_timer_add(interval, window=context.window)
+            wm.modal_handler_add(self)
+            context.scene.johnnygizmo_puppetstrings_settings.controller_running = True
+            return {"RUNNING_MODAL"}
 
     def cancel(self, context):
         scene = context.scene
@@ -180,17 +198,108 @@ class FG_OT_StartController(bpy.types.Operator):
         wm = context.window_manager
         if self._timer:
             wm.event_timer_remove(self._timer)
-        fastgamepad.quit()
         context.scene.johnnygizmo_puppetstrings_settings.controller_running = False
-        # print("Gamepad polling cancelled.")
+        fastgamepad.quit()
+        return {"CANCELLED"}
 
 
-def register():
+def post_playback_handler(scene,depsgrap):
+    print("pre playback handler")
+    settings = scene.johnnygizmo_puppetstrings_settings 
+    mapping_sets = scene.johnnygizmo_puppetstrings_mapping_sets
+    active_mapping_set = mapping_sets[scene.johnnygizmo_puppetstrings_active_mapping_set]
+
+    if active_mapping_set.active == True:
+        for mapping in active_mapping_set.button_mappings:
+            if not mapping.enabled or mapping.object == "":
+                continue
+            curve = getCurve(mapping,settings)
+            if curve: curve.mute = False
+
+def pre_playback_handler(scene,depsgrap):
+    settings = scene.johnnygizmo_puppetstrings_settings 
+    mapping_sets = scene.johnnygizmo_puppetstrings_mapping_sets
+    active_mapping_set = mapping_sets[scene.johnnygizmo_puppetstrings_active_mapping_set]
+
+    if active_mapping_set.active == True:
+        for mapping in active_mapping_set.button_mappings:
+            if not mapping.enabled or mapping.object == "":
+                continue
+            curve = getCurve(mapping,settings)
+            if curve: curve.mute = True 
+
+
+
+def getCurve(mapping,settings):
+    axis_map = {
+        "x":0,
+        "y":1,
+        "z":2
+    }
+
+    ob = bpy.data.objects.get(mapping.object)
+    if ob and ob.animation_data and ob.animation_data.action:
+        if settings.enable_record or settings.use_punch:
+            if mapping.mapping_type ==  "location":
+                return next((curve for curve in ob.animation_data.action.fcurves if curve.data_path == "location" and curve.array_index == axis_map[mapping.axis]), None)               
+            elif mapping.mapping_type ==  "rotation_euler":
+                return next((curve for curve in ob.animation_data.action.fcurves if curve.data_path == "rotation_euler" and curve.array_index == axis_map[mapping.axis]), None)
+            elif mapping.mapping_type ==  "scale":
+                return next((curve for curve in ob.animation_data.action.fcurves if curve.data_path == "scale" and curve.array_index == axis_map[mapping.axis]), None)            
+            elif mapping.mapping_type == "shape_key":
+                if ob.data.shape_keys:
+                    key = ob.data.shape_keys.key_blocks.get(mapping.data_path)                    
+                    if key:
+                        action = ob.data.shape_keys.animation_data.action
+                        active_slot = action.slots.active
+                        for layer in action.layers:                            
+                            for strip in layer.strips:
+                                for cb in strip.channelbags:
+                                    for curve in cb.fcurves:                                        
+                                        curve = next((curve for curve in cb.fcurves if curve.data_path == "key_blocks[\""+mapping.data_path+"\"].value"), None)         
+                                        if curve != None:
+                                            return curve 
+
+def pre_frame_change_handler(scene,depsgrap):
+    settings = scene.johnnygizmo_puppetstrings_settings
+    settings.controller_running = fastgamepad.initialized()
+    punch_in_marker = getattr(settings, "punch_in_marker","")
+    punch_out_marker = getattr(settings, "punch_out_marker","")        
+    punch_in = scene.timeline_markers.get(punch_in_marker, None)
+    punch_out = scene.timeline_markers.get(punch_out_marker, None)
+            
+    pre_roll = settings.pre_roll
+    punch_in_frame = scene.frame_start
+    if punch_in:
+        punch_in_frame = punch_in.frame
+    punch_out_frame = scene.frame_end
+    if punch_out:
+        punch_out_frame = punch_out.frame  
+
+
+    if scene.frame_current == punch_in_frame and not settings.enable_record and settings.use_punch:
+        print("punch_in")
+        settings.enable_record = True 
+        
+    if scene.frame_current == punch_out_frame and settings.enable_record and settings.use_punch:
+        print("punch_out")
+        settings.enable_record = False
+
+    if settings.use_punch and scene.frame_current > punch_out_frame + pre_roll:
+        bpy.ops.puppetstrings.playback(action="STOP")
+ 
+    if scene.frame_current == scene.frame_end and settings.one_shot:
+        bpy.ops.screen.animation_cancel() 
+
+
+def register(): 
     bpy.utils.register_class(FG_OT_StartController)
+    bpy.app.handlers.animation_playback_pre.append(pre_playback_handler)
+    bpy.app.handlers.animation_playback_post.append(post_playback_handler)
+    bpy.app.handlers.frame_change_post.append(pre_frame_change_handler)
 
 def unregister():
+    bpy.app.handlers.frame_change_post.remove(pre_frame_change_handler)
+    bpy.app.handlers.animation_playback_pre.remove(pre_playback_handler)
+    bpy.app.handlers.animation_playback_post.remove(post_playback_handler)
     bpy.utils.unregister_class(FG_OT_StartController)
-
-
-if __name__ == "__main__":
-    register()

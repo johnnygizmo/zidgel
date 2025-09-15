@@ -12,22 +12,33 @@ class FG_PT_MappingSetsPanel(bpy.types.Panel):
         scene = context.scene
         settings  = scene.johnnygizmo_puppetstrings_settings
         if not settings.controller_running:
-            layout.operator("fg.start_controller", text="Enable Controller", icon="STRIP_COLOR_01")
+            layout.operator("fg.start_controller", text="Enable Controller", icon="STRIP_COLOR_01").action = "START"
         else:
-            layout.operator("fg.start_controller", text="Controller Running (esc to stop)", icon="STRIP_COLOR_04")
+            layout.operator("fg.start_controller", text="Controller Running (esc to stop)", icon="STRIP_COLOR_04").action = "STOP"
 
-        if settings.enable_record:
-            layout.prop(settings, "enable_record",text="Recording Armed", icon="RECORD_ON")
+
+        if context.screen.is_animation_playing:
+            if settings.enable_record:
+                layout.prop(settings, "enable_record",text="Recording", icon="RECORD_ON")
+            elif settings.use_punch and not settings.enable_record:
+                layout.prop(settings, "enable_record",text="Punched Out", icon="RECORD_OFF")
+            elif not settings.use_punch and not settings.enable_record:
+                layout.prop(settings, "enable_record",text="Playing", icon="NODE_SOCKET_SHADER")
         else:
-            layout.prop(settings, "enable_record",text="Recording Disarmed", icon="RECORD_OFF")
+            if settings.enable_record and not settings.use_punch:
+                layout.prop(settings, "enable_record",text="Recording Armed", icon="RECORD_ON")
+            elif settings.use_punch:
+                layout.prop(settings, "enable_record",text="Recording Armed (punch armed)", icon="RECORD_ON")
+            else:
+                 layout.prop(settings, "enable_record",text="Recording Disarmed", icon="RECORD_OFF")
 
 
         # Timeline marker dropdowns for punch in/out
         row = layout.row()
         if settings.use_punch:
-            row.prop(context.scene.johnnygizmo_puppetstrings_settings, "use_punch", text="", icon="KEYTYPE_JITTER_VEC")
+            row.prop(context.scene.johnnygizmo_puppetstrings_settings, "use_punch", text="", icon="RECORD_ON")
         else:
-            row.prop(context.scene.johnnygizmo_puppetstrings_settings, "use_punch", text="",icon="HANDLETYPE_FREE_VEC")
+            row.prop(context.scene.johnnygizmo_puppetstrings_settings, "use_punch", text="",icon="RECORD_OFF")
 
         row.prop_search(context.scene.johnnygizmo_puppetstrings_settings, "punch_in_marker", context.scene, "timeline_markers", text="In", icon='IMPORT')
         row.prop_search(context.scene.johnnygizmo_puppetstrings_settings, "punch_out_marker", context.scene, "timeline_markers", text="Out", icon='EXPORT')
@@ -37,7 +48,7 @@ class FG_PT_MappingSetsPanel(bpy.types.Panel):
         # row.prop(context.scene.johnnygizmo_puppetstrings_settings, "punch_out")
 
         row = layout.row()
-        row.prop(context.scene.johnnygizmo_puppetstrings_settings, "one_shot", text="One Pass")
+        row.prop(context.scene.johnnygizmo_puppetstrings_settings, "one_shot", text="Prevent Looping Animation")
         
         row = layout.row()
         row.operator("puppetstrings.playback", text="Play", icon="PLAY").action = "PLAY"
@@ -45,6 +56,9 @@ class FG_PT_MappingSetsPanel(bpy.types.Panel):
         row = layout.row()
         row.prop(context.scene.johnnygizmo_puppetstrings_settings, "controller_fps")
         row.prop(context.scene.johnnygizmo_puppetstrings_settings, "keyframe_interval")
+        row = layout.row()
+        row.prop(context.scene.johnnygizmo_puppetstrings_settings, "smoothing")
+        row.prop(context.scene.johnnygizmo_puppetstrings_settings, "debounce_time")
 
 
         layout.label(text="Select Mapping Set:")
@@ -82,7 +96,9 @@ class FG_PT_ButtonMappingsPanel(bpy.types.Panel):
         col = row.column(align=True)
         col.operator("fg.add_button_mapping", icon='ADD', text="")
         col.operator("fg.remove_button_mapping", icon='REMOVE', text="")
-
+        
+        col = row.column(align=True)
+       
 class FG_UL_MappingSetList(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         ms = item
@@ -101,47 +117,62 @@ class FG_UL_MappingSetList(bpy.types.UIList):
 class FG_UL_ButtonMappingList(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         bm = item
+                
         if self.layout_type in {'DEFAULT', 'COMPACT'}:
             col = layout.column()
             row = col.row(align=True)
+           
             if bm.enabled:
                 row.prop(bm, "enabled", text="", icon="CHECKBOX_HLT")
             else:
                 row.prop(bm, "enabled", text="", icon="CHECKBOX_DEHLT")
-
+            if bm.show_panel:
+                row.prop(bm, "show_panel", text="", icon="HIDE_OFF")
+            else:
+                row.prop(bm, "show_panel", text="", icon="HIDE_ON")
             row.prop(bm, "button", text="")
             #layout.prop(bm, "invert", icon="ARROW_LEFTRIGHT", text="")
 
             #layout.prop(bm, "scale", text="")
             row.prop_search(bm, "object", bpy.data, "objects", text="")
-            row = col.row(align=True)
-            row.separator(factor=3)
-            row.prop(bm, "mapping_type", text="")
             
-            if bm.mapping_type in ("location", "rotation_euler", "scale")  :
-                row.prop(bm, "axis", text="")
-            elif bm.mapping_type == "shape_key":
-                ob = bpy.data.objects.get(bm.object)
-                #layout.template_path_builder(bm, "data_path", root=ob, text="")
-                if ob and ob.type == 'MESH' and ob.data.shape_keys:
-                    row.prop_search(bm, "data_path", text="", search_data=ob.data.shape_keys, search_property="key_blocks")
+            if bm.show_panel:
+            
+                row = col.row(align=True)
+                row.separator(factor=3)
+                row.prop(bm, "mapping_type", text="")
+                
+                if bm.mapping_type in ("location", "rotation_euler", "scale")  :
+                    row.prop(bm, "axis", text="")
+                elif bm.mapping_type == "shape_key":
+                    ob = bpy.data.objects.get(bm.object)
+                    #layout.template_path_builder(bm, "data_path", root=ob, text="")
+                    if ob and ob.type == 'MESH' and ob.data.shape_keys:
+                        row.prop_search(bm, "data_path", text="", search_data=ob.data.shape_keys, search_property="key_blocks")
+                    else:
+                        row.prop(bm, "data_path", text="")
+                elif bm.mapping_type == "modifier":
+                    ob = bpy.data.objects.get(bm.object)
+                    if ob:
+                        row.prop_search(bm, "data_path", text="", search_data=ob, search_property="modifiers")
+                        mod = ob.modifiers.get(bm.data_path)
+                        if mod:
+                            row.prop(bm, "sub_data_path", text="")
                 else:
                     row.prop(bm, "data_path", text="")
-            elif bm.mapping_type == "modifier":
-                ob = bpy.data.objects.get(bm.object)
-                if ob:
-                    row.prop_search(bm, "data_path", text="", search_data=ob, search_property="modifiers")
-                    mod = ob.modifiers.get(bm.data_path)
-                    if mod:
-                        row.prop(bm, "sub_data_path", text="")
-            else:
-                row.prop(bm, "data_path", text="")
-            row = col.row(align=True)
-            row.separator(factor=3)
+                row = col.row(align=True)
+                row.separator(factor=3)
 
-            row.prop(bm, "operation", text="Operation", emboss=True)
-            if bm.operation == "expression":
-                row.prop(bm, "expression", text="Expression", emboss=True)
+                row.prop(bm, "operation", text="Operation", emboss=True)
+                row.prop(bm, "input_easing", text="Easing")
+                if bm.operation == "expression":
+                    row.prop(bm, "expression", text="Expression", emboss=True)
+                
+                if bm.operation == "curve":
+                    row = col.row(align=True)
+                    col = row.column()
+                    box = col.box()
+                    box.template_curve_mapping(bm.curve_owner,"curve")
         elif self.layout_type in {'GRID'}:
             layout.alignment = 'CENTER'
             layout.label(text=bm.name)
@@ -170,7 +201,15 @@ class FG_OT_AddButtonMapping(bpy.types.Operator):
     bl_label = "Add Button Mapping"
     def execute(self, context):
         ms = context.scene.johnnygizmo_puppetstrings_mapping_sets[context.scene.johnnygizmo_puppetstrings_active_mapping_set]
-        ms.button_mappings.add()
+        mapping = ms.button_mappings.add()
+        if not mapping.curve_owner:
+            brush = bpy.data.brushes.new("ButtonMappingCurve", mode='TEXTURE_PAINT')
+            brush.curve_preset = 'SMOOTH'
+            brush.curve.clip_min_x = -1
+            brush.curve.clip_max_x = 1
+            brush.curve.reset_view()
+            mapping.curve_owner = brush
+            print("ok")
         return {'FINISHED'}
 
 class FG_OT_RemoveButtonMapping(bpy.types.Operator):

@@ -1,6 +1,8 @@
 #include <Python.h>
 #include <SDL3\SDL.h>
 #include <map>
+#include <iostream>
+using namespace std;
 
 struct EMAState {
     bool initialized = false;
@@ -19,7 +21,7 @@ static EMAState axisEMA[6];   // lx, ly, rx, ry, lt, rt
 static double emaAlpha = 0.2; // default smoothing factor
 static std::map<int, DebounceState> buttonStates; 
 static Uint64 debounceDelayNS = 30 * 1000000ULL; // 30ms default
-
+static SDL_Joystick *virtual_joystick = NULL;
 
 static PyObject* fg_initialized(PyObject* self, PyObject* args) {
     if (gamepad) {
@@ -66,7 +68,8 @@ static PyObject* fg_set_smoothing(PyObject* self, PyObject* args) {
     if (!PyArg_ParseTuple(args, "i", &ms)) {
         return NULL;
     }
-
+    
+    cout << "Setting smoothing to " << ms << " ms" << endl;
     // Assume poll rate ~60 Hz (~16 ms per sample).
     // Equivalent N samples = ms / 16.
     // Alpha = 2 / (N + 1)
@@ -78,47 +81,94 @@ static PyObject* fg_set_smoothing(PyObject* self, PyObject* args) {
 }
 static PyObject* fg_set_debounce(PyObject* self, PyObject* args) {
     int ms;
+    
     if (!PyArg_ParseTuple(args, "i", &ms)) {
         return NULL;
     }
+    cout << "Setting debounce to " << ms << " ms" << endl;
     debounceDelayNS = (Uint64)ms * 1000000ULL;
-    Py_RETURN_NONE;
+
+    return Py_BuildValue("l", (long)debounceDelayNS / 1000000);
+    //Py_RETURN_NONE;
 }
 
-// Init SDL and open the first gamepad
 static PyObject* fg_init(PyObject* self, PyObject* args) {
-    if (SDL_Init(SDL_INIT_GAMEPAD) != 0) {
+    if (SDL_Init(SDL_INIT_GAMEPAD | SDL_INIT_JOYSTICK ) == 0) {
         return PyErr_Format(PyExc_RuntimeError, "SDL_Init failed: %s", SDL_GetError());
     }
 
-    int num = 0;
-    SDL_JoystickID* ids = SDL_GetGamepads(&num);
+    int num_gamepads = 0;
+    SDL_JoystickID* gamepad_ids = SDL_GetGamepads(&num_gamepads);
 
-    if (num < 1) {
-        // No gamepads found, create a virtual joystick
-        SDL_VirtualJoystickDesc desc = {0};
-        desc.name = "Virtual Gamepad";
+    if (num_gamepads < 1) {
+        if (!virtual_joystick) {
+        SDL_VirtualJoystickDesc desc;
+        SDL_INIT_INTERFACE(&desc);     // zero/init the interface struct. (use SDL_INIT_INTERFACE macro)
         desc.type = SDL_JOYSTICK_TYPE_GAMEPAD;
-        SDL_JoystickID vjoy_id = SDL_AttachVirtualJoystick(&desc);
-        if (vjoy_id == 0) {
-            SDL_Quit();
-            return PyErr_Format(PyExc_RuntimeError, "Failed to create virtual joystick: %s", SDL_GetError());
+        desc.naxes = 6;    // Lx, Ly, Rx, Ry, LT, RT
+        desc.nbuttons = 11; // A,B,X,Y,LB,RB,Back,Start,Guide,LS,RS (adjust as you like)
+        desc.nhats = 1;    // d-pad as a POV hat
+        desc.name = "Virtual Xbox 360 (SDL3)";
+
+        // Make SDL know which buttons/axes are valid for a gamepad layout.
+        // Use SDL_GAMEPAD_AXIS_* and SDL_GAMEPAD_BUTTON_* enum values as bits.
+        desc.axis_mask = (1u << SDL_GAMEPAD_AXIS_LEFTX) |
+                        (1u << SDL_GAMEPAD_AXIS_LEFTY) |
+                        (1u << SDL_GAMEPAD_AXIS_RIGHTX) |
+                        (1u << SDL_GAMEPAD_AXIS_RIGHTY) |
+                        (1u << SDL_GAMEPAD_AXIS_LEFT_TRIGGER) |
+                        (1u << SDL_GAMEPAD_AXIS_RIGHT_TRIGGER);
+
+        desc.button_mask = (1u << SDL_GAMEPAD_BUTTON_SOUTH) |  // A
+                        (1u << SDL_GAMEPAD_BUTTON_EAST)  |  // B
+                        (1u << SDL_GAMEPAD_BUTTON_WEST)  |  // X
+                        (1u << SDL_GAMEPAD_BUTTON_NORTH) |  // Y
+                        (1u << SDL_GAMEPAD_BUTTON_LEFT_SHOULDER) |
+                        (1u << SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER) |
+                        (1u << SDL_GAMEPAD_BUTTON_BACK) |
+                        (1u << SDL_GAMEPAD_BUTTON_START) |
+                        (1u << SDL_GAMEPAD_BUTTON_GUIDE) |
+                        (1u << SDL_GAMEPAD_BUTTON_LEFT_STICK) |
+                        (1u << SDL_GAMEPAD_BUTTON_RIGHT_STICK);
+
+        SDL_JoystickID virtual_id = SDL_AttachVirtualJoystick(&desc);
+
+        if (virtual_id == 0) {
+            SDL_Log("Couldn't attach virtual device: %s\n", SDL_GetError());
+            // Optionally, you might want to return an error here if a virtual joystick is critical
+        } else {
+            virtual_joystick = SDL_OpenJoystick(virtual_id);
+            if (!virtual_joystick) {
+                SDL_Log("Couldn't open virtual device: %s\n", SDL_GetError());
+                // Optionally, return an error here
+            } else {
+                SDL_Log("Virtual joystick attached with ID: %d\n", virtual_id);
+            }
         }
-        // Get the updated list of gamepads (should include the virtual one)
-        if (ids) SDL_free(ids);
-        ids = SDL_GetGamepads(&num);
-        if (num < 1) {
-            SDL_Quit();
-            return PyErr_Format(PyExc_RuntimeError, "Virtual joystick not found after creation");
-        }
+
+        gamepad = SDL_OpenGamepad(virtual_id);
+    }
+        
+    if (gamepad_ids) {
+        SDL_free(gamepad_ids);
+        gamepad_ids = NULL; 
     }
 
-    gamepad = SDL_OpenGamepad(ids[0]);
-    SDL_free(ids);
-    if (!gamepad) {
+   if (!virtual_joystick) {
         SDL_Quit();
-        return PyErr_Format(PyExc_RuntimeError, "Failed to open gamepad: %s", SDL_GetError());
+        return PyErr_Format(PyExc_RuntimeError, "Failed to create or open virtual joystick");
     }
+    } else {
+        gamepad = SDL_OpenGamepad(gamepad_ids[0]);
+        if (!gamepad) {
+            SDL_Quit();
+            return PyErr_Format(PyExc_RuntimeError, "Failed to open gamepad: %s", SDL_GetError());
+        }
+        if (gamepad_ids) {
+            SDL_free(gamepad_ids);
+            gamepad_ids = NULL;
+        }
+    }\
     Py_RETURN_NONE;
 }
 
