@@ -146,7 +146,7 @@ class FG_OT_StartController(bpy.types.Operator):
                     except Exception as e:
                         pass
 
-                    if context.scene.johnnygizmo_puppetstrings_settings.enable_record and context.screen.is_animation_playing:
+                    if context.scene.johnnygizmo_puppetstrings_settings.enable_record and context.screen.is_animation_playing and not context.screen.is_scrubbing:
                         if(context.scene.frame_current % context.scene.johnnygizmo_puppetstrings_settings.keyframe_interval) == 0:
                             index_map = {"x": 0, "y": 1, "z": 2}
                             if mapping.mapping_type == "location":
@@ -204,7 +204,6 @@ class FG_OT_StartController(bpy.types.Operator):
 
 
 def post_playback_handler(scene,depsgrap):
-    print("pre playback handler")
     settings = scene.johnnygizmo_puppetstrings_settings 
     mapping_sets = scene.johnnygizmo_puppetstrings_mapping_sets
     active_mapping_set = mapping_sets[scene.johnnygizmo_puppetstrings_active_mapping_set]
@@ -224,7 +223,7 @@ def pre_playback_handler(scene,depsgrap):
     if active_mapping_set.active == True:
         for mapping in active_mapping_set.button_mappings:
             if not mapping.enabled or mapping.object == "":
-                continue
+                continue            
             curve = getCurve(mapping,settings)
             if curve: curve.mute = True 
 
@@ -236,30 +235,38 @@ def getCurve(mapping,settings):
         "y":1,
         "z":2
     }
+    
+    ob = bpy.data.objects.get(mapping.object) 
+    if settings.enable_record or settings.use_punch:
+        if mapping.mapping_type in [ "location" , "rotation_euler","scale"]:
+            if(not ob or not ob.animation_data):
+                return None
+            action = ob.animation_data.action
+            for layer in action.layers:                            
+                for strip in layer.strips:
+                    for cb in strip.channelbags:
+                        for curve in cb.fcurves:                                        
+                            curve = next((curve for curve in cb.fcurves if curve.data_path ==  mapping.mapping_type and curve.array_index == axis_map[mapping.axis]), None)         
+                            if curve != None:
+                                return curve                 
 
-    ob = bpy.data.objects.get(mapping.object)
-    if ob and ob.animation_data and ob.animation_data.action:
-        if settings.enable_record or settings.use_punch:
-            if mapping.mapping_type ==  "location":
-                return next((curve for curve in ob.animation_data.action.fcurves if curve.data_path == "location" and curve.array_index == axis_map[mapping.axis]), None)               
-            elif mapping.mapping_type ==  "rotation_euler":
-                return next((curve for curve in ob.animation_data.action.fcurves if curve.data_path == "rotation_euler" and curve.array_index == axis_map[mapping.axis]), None)
-            elif mapping.mapping_type ==  "scale":
-                return next((curve for curve in ob.animation_data.action.fcurves if curve.data_path == "scale" and curve.array_index == axis_map[mapping.axis]), None)            
-            elif mapping.mapping_type == "shape_key":
-                if ob.data.shape_keys:
-                    key = ob.data.shape_keys.key_blocks.get(mapping.data_path)                    
-                    if key:
-                        action = ob.data.shape_keys.animation_data.action
-                        active_slot = action.slots.active
-                        for layer in action.layers:                            
-                            for strip in layer.strips:
-                                for cb in strip.channelbags:
-                                    for curve in cb.fcurves:                                        
-                                        curve = next((curve for curve in cb.fcurves if curve.data_path == "key_blocks[\""+mapping.data_path+"\"].value"), None)         
-                                        if curve != None:
-                                            return curve 
-
+        elif mapping.mapping_type == "shape_key":
+            if not ob or not ob.data or not ob.data.shape_keys or not ob.data.shape_keys.animation_data:
+                return None
+            if ob.data.shape_keys:
+                key = ob.data.shape_keys.key_blocks.get(mapping.data_path)                    
+                if key:
+                    action = ob.data.shape_keys.animation_data.action                        
+                    for layer in action.layers:                            
+                        for strip in layer.strips:
+                            for cb in strip.channelbags:
+                                for curve in cb.fcurves:           
+                                    dp ="key_blocks[\""+mapping.data_path+"\"].value"                           
+                                    curve = next((curve for curve in cb.fcurves if curve.data_path == dp), None)         
+                                    if curve != None:
+                                        return curve 
+    return None
+       
 def pre_frame_change_handler(scene,depsgrap):
     settings = scene.johnnygizmo_puppetstrings_settings
     settings.controller_running = fastgamepad.initialized()
@@ -278,11 +285,9 @@ def pre_frame_change_handler(scene,depsgrap):
 
 
     if scene.frame_current == punch_in_frame and not settings.enable_record and settings.use_punch:
-        print("punch_in")
         settings.enable_record = True 
         
     if scene.frame_current == punch_out_frame and settings.enable_record and settings.use_punch:
-        print("punch_out")
         settings.enable_record = False
 
     if settings.use_punch and scene.frame_current > punch_out_frame + pre_roll:
