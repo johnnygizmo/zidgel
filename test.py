@@ -1,4 +1,4 @@
-import fastgamepad
+from . import fastgamepad
 fastgamepad.init()
 b = fastgamepad.get_buttons()
 print(b)

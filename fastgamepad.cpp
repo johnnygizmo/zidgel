@@ -2,26 +2,38 @@
 #include <SDL3\SDL.h>
 #include <map>
 #include <iostream>
+#include <unordered_map>
 using namespace std;
 
 struct EMAState {
+    double emAlpha = 0.2;
     bool initialized = false;
     float value = 0.0f;
 };
 
 struct DebounceState {
+    Uint64 debounceDelayNS = 30 * 1000000ULL; 
     int stableState = 0;      // last debounced state (0 or 1)
     int pendingState = 0;     // last raw state observed
     Uint64 lastChangeTime = 0; // time of last raw change
 };
 
+struct Input {
+    int id = -1;
+    int type =0;
+    EMAState smoothing;
+    DebounceState debounce;
+};
 
 static SDL_Gamepad* gamepad = nullptr;
+static unordered_map<int,Input> inputs;
 static EMAState axisEMA[6];   // lx, ly, rx, ry, lt, rt
 static double emaAlpha = 0.2; // default smoothing factor
 static std::map<int, DebounceState> buttonStates; 
 static Uint64 debounceDelayNS = 30 * 1000000ULL; // 30ms default
 static SDL_Joystick *virtual_joystick = NULL;
+
+
 
 static PyObject* fg_initialized(PyObject* self, PyObject* args) {
     if (gamepad) {

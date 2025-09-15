@@ -1,6 +1,6 @@
 import bpy
 
-import fastgamepad
+from . import fastgamepad
 
 class PuppetStrings_OT_PlayWithPunch(bpy.types.Operator):
     bl_idname = "puppetstrings.playback"

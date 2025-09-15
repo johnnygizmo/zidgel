@@ -1,5 +1,5 @@
 import bpy
-import fastgamepad
+from . import fastgamepad
 
 class JOHNNYGIZMO_PuppetStringsSettings(bpy.types.PropertyGroup):
     controller_fps: bpy.props.FloatProperty(
@@ -62,11 +62,9 @@ class JOHNNYGIZMO_PuppetStringsSettings(bpy.types.PropertyGroup):
     )  # type: ignore
 
     def update_smoothing(self, context):
-        import fastgamepad
         if fastgamepad.initialized():
             fastgamepad.set_smoothing(self.smoothing)
     def update_debounce(self, context):
-        import fastgamepad
         if fastgamepad.initialized():
             fastgamepad.set_debounce(self.debounce_time)
 
