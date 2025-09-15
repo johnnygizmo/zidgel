@@ -69,7 +69,14 @@ static PyObject* fg_set_smoothing(PyObject* self, PyObject* args) {
         return NULL;
     }
     
-    cout << "Setting smoothing to " << ms << " ms" << endl;
+    if (ms == 0) {
+        emaAlpha = 0.0; // no smoothing
+        for (int i = 0; i < 6; i++) {
+            axisEMA[i].initialized = false; // reset EMA state
+        }   
+        Py_RETURN_NONE;
+    }
+    
     // Assume poll rate ~60 Hz (~16 ms per sample).
     // Equivalent N samples = ms / 16.
     // Alpha = 2 / (N + 1)
@@ -85,7 +92,6 @@ static PyObject* fg_set_debounce(PyObject* self, PyObject* args) {
     if (!PyArg_ParseTuple(args, "i", &ms)) {
         return NULL;
     }
-    cout << "Setting debounce to " << ms << " ms" << endl;
     debounceDelayNS = (Uint64)ms * 1000000ULL;
 
     return Py_BuildValue("l", (long)debounceDelayNS / 1000000);
@@ -185,6 +191,16 @@ static PyObject* fg_get_axes(PyObject* self, PyObject* args) {
     float lt = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER) / 32767.0f;
     float rt = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER) / 32767.0f;
     
+    if(emaAlpha > 0.0) {
+        // Apply EMA smoothing
+        lx = emaUpdate(axisEMA[0], lx);
+        ly = emaUpdate(axisEMA[1], ly);
+        rx = emaUpdate(axisEMA[2], rx);
+        ry = emaUpdate(axisEMA[3], ry);
+        lt = emaUpdate(axisEMA[4], lt);
+        rt = emaUpdate(axisEMA[5], rt);
+    }
+
     lx = emaUpdate(axisEMA[0], lx);
     ly = emaUpdate(axisEMA[1], ly);
     rx = emaUpdate(axisEMA[2], rx);
@@ -203,6 +219,10 @@ static PyObject* fg_get_axes(PyObject* self, PyObject* args) {
 }
 
 static int get_debounced_button(int button) {
+    if(debounceDelayNS == 0) {
+        // No debouncing, return raw state
+        return SDL_GetGamepadButton(gamepad, (SDL_GamepadButton)button);
+    }   
     int rawState = SDL_GetGamepadButton(gamepad, (SDL_GamepadButton)button);
     return debounceButton(button, rawState);
 }
