@@ -17,6 +17,8 @@ When no punch points are selected, recording will happen at all frames.
 
 Prevent Looping Animation: When the playback gets to the final frame, playback is cancelled rather than looping
 
+Auto-Simplify: Enable/Disable the render settings "simplify" panel on recording or recording/playback.
+
 Controller FPS: How often the controller is polled
 
 Keyframe Interval: How often to record keyframes
