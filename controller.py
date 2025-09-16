@@ -12,6 +12,7 @@ import sys
 import os
 import math
 from pathlib import Path
+from . import mapping_data
 
 extension_dir = Path(__file__).parent
 if str(extension_dir) not in sys.path:
@@ -80,7 +81,7 @@ class FG_OT_StartController(bpy.types.Operator):
                         continue
                     
                     op = mapping.operation
-                    value = combined.get(mapping.button) 
+                    value = combined.get(mapping.button)                
                     if mapping.input_easing == "linear":
                         pass
                     elif mapping.input_easing == "x2":
@@ -105,6 +106,7 @@ class FG_OT_StartController(bpy.types.Operator):
                     ob = bpy.data.objects.get(mapping.object)
 
                     command = " = " + str(value)
+                    pre_command = ""
                     if mapping.operation == "curve":
                         mapped = mapping.curve_owner.curve.evaluate(mapping.curve_owner.curve.curves[0],value)
                         command = " = " + str(round(mapped,6))
@@ -116,11 +118,26 @@ class FG_OT_StartController(bpy.types.Operator):
                         command = " = " + str(-value)
 
                     if mapping.mapping_type == "location":
-                        command = "ob.location." + mapping.axis + command
-                    elif mapping.mapping_type == "rotation_euler":
-                        command = "ob.rotation_euler." + mapping.axis + command
-                    elif mapping.mapping_type == "scale":
-                        command = "ob.scale." + mapping.axis + command
+                        if ob.type != 'ARMATURE':
+                            command = "ob.location." + mapping.axis + command
+                        else:                            
+                            command = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].location." + mapping.axis + command
+
+                    elif mapping.mapping_type == "rotation_euler":                        
+                        if ob.type != 'ARMATURE':
+                            pre_command = "ob.rotation_mode = 'XYZ'"
+                            command = "ob.rotation_euler." + mapping.axis + command
+                        else:            
+                            pre_command = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].rotation_mode = 'XYZ'"                
+                            command = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].rotation_euler." + mapping.axis + command            
+
+                    elif mapping.mapping_type == "scale":                        
+                        if ob.type != 'ARMATURE':
+                            command = "ob.scale." + mapping.axis + command
+                        else:                            
+                            command = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].scale." + mapping.axis + command            
+
+
                     elif mapping.mapping_type == "shape_key":
                         if ob.data.shape_keys:
                             if ob.data.shape_keys.key_blocks.get(mapping.data_path):
@@ -132,7 +149,7 @@ class FG_OT_StartController(bpy.types.Operator):
                     elif mapping.mapping_type == "modifier":
                         if ob and ob.modifiers:
                             mod = ob.modifiers.get(mapping.data_path)
-                            if mod and mapping.sub_data_path:
+                            if mod and mapping.sub_data_path:                                
                                 command = "ob.modifiers[\"" + mapping.data_path + "\"]" + mapping.sub_data_path + command
                             else:
                                 continue
@@ -141,11 +158,17 @@ class FG_OT_StartController(bpy.types.Operator):
                     else:
                         command = "ob." + mapping.data_path + " = " + str(value)                               
                     
-                    try:
+                    try:         
+                        if pre_command != "":
+                            exec(pre_command)          
                         exec(command)
                     except Exception as e:
                         pass
+                    
 
+                    if ob.type=="ARMATURE" and mapping.sub_data_path != "":
+                        ob = ob.pose.bones[mapping.sub_data_path]
+                        
                     if context.scene.johnnygizmo_puppetstrings_settings.enable_record and context.screen.is_animation_playing and not context.screen.is_scrubbing:
                         if(context.scene.frame_current % context.scene.johnnygizmo_puppetstrings_settings.keyframe_interval) == 0:
                             index_map = {"x": 0, "y": 1, "z": 2}
@@ -175,6 +198,8 @@ class FG_OT_StartController(bpy.types.Operator):
         return {"PASS_THROUGH"}
 
     def execute(self, context):   
+        if len(bpy.context.scene.johnnygizmo_puppetstrings_buttons_settings)==0:
+            mapping_data.create_buttons()
         if self.action == "STOP":               
             print("Stopping gamepad controller...")         
             self.cancel(context)
