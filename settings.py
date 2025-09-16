@@ -68,7 +68,6 @@ class JOHNNYGIZMO_PuppetStringsSettings(bpy.types.PropertyGroup):
         if fastgamepad.initialized():
             fastgamepad.set_debounce(self.debounce_time)
 
-
     smoothing: bpy.props.IntProperty(
         name="Smoothing ms",
         description="Smoothing factor for input values",

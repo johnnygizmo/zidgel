@@ -1,4 +1,5 @@
 import bpy
+from . import fastgamepad
 
 class FG_PT_MappingSetsPanel(bpy.types.Panel):
     bl_label = "Mapping Sets"
@@ -11,7 +12,9 @@ class FG_PT_MappingSetsPanel(bpy.types.Panel):
         layout = self.layout
         scene = context.scene
         settings  = scene.johnnygizmo_puppetstrings_settings
-        if not settings.controller_running:
+        
+        
+        if not fastgamepad.initialized():
             layout.operator("fg.start_controller", text="Enable Controller", icon="STRIP_COLOR_01").action = "START"
         else:
             layout.operator("fg.start_controller", text="Controller Running (esc to stop)", icon="STRIP_COLOR_04").action = "STOP"
@@ -59,8 +62,6 @@ class FG_PT_MappingSetsPanel(bpy.types.Panel):
         row = layout.row()
         row.prop(context.scene.johnnygizmo_puppetstrings_settings, "smoothing")
         row.prop(context.scene.johnnygizmo_puppetstrings_settings, "debounce_time")
-
-
         layout.label(text="Select Mapping Set:")
         row = layout.row()
         row.template_list(
@@ -95,10 +96,29 @@ class FG_PT_ButtonMappingsPanel(bpy.types.Panel):
         )
         col = row.column(align=True)
         col.operator("fg.add_button_mapping", icon='ADD', text="")
-        col.operator("fg.remove_button_mapping", icon='REMOVE', text="")
-        
+        col.operator("fg.remove_button_mapping", icon='REMOVE', text="")        
         col = row.column(align=True)
        
+
+class PUPPETSTRINGS_PT_buttons(bpy.types.Panel):
+    bl_label = "Puppet Strings Buttons"
+    bl_idname = "PUPPETSTRINGS_PT_buttons"
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
+    bl_category = "Gamepad"
+
+    def draw(self, context):
+        layout = self.layout
+        scene = context.scene
+        col = layout.column()
+        for item in scene.johnnygizmo_puppetstrings_buttons_settings:
+            box = col.box()
+            row = box.row()
+            row.label(text=item.full_name or item.name)
+            box.prop(item, "smooth")
+            box.prop(item, "debounce")
+   
+
 class FG_UL_MappingSetList(bpy.types.UIList):
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         ms = item
@@ -135,6 +155,16 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
 
             #layout.prop(bm, "scale", text="")
             row.prop_search(bm, "object", bpy.data, "objects", text="")
+            
+            ob = bpy.data.objects.get(bm.object)
+            if ob and ob.type == "ARMATURE":
+                row.prop_search(
+                bm,
+                "sub_data_path",
+                ob.pose,
+                "bones",
+                text=""
+            )
             
             if bm.show_panel:
             
@@ -173,6 +203,10 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
                     col = row.column()
                     box = col.box()
                     box.template_curve_mapping(bm.curve_owner,"curve")
+                row = col.row(align=True)
+                # row.prop(bm,"smoothing_ms")
+                # row.prop(bm,"debounce_ms")
+                
         elif self.layout_type in {'GRID'}:
             layout.alignment = 'CENTER'
             layout.label(text=bm.name)
@@ -209,7 +243,6 @@ class FG_OT_AddButtonMapping(bpy.types.Operator):
             brush.curve.clip_max_x = 1
             brush.curve.reset_view()
             mapping.curve_owner = brush
-            print("ok")
         return {'FINISHED'}
 
 class FG_OT_RemoveButtonMapping(bpy.types.Operator):
@@ -225,6 +258,7 @@ class FG_OT_RemoveButtonMapping(bpy.types.Operator):
 
 
 def register():
+    #bpy.utils.register_class(PUPPETSTRINGS_PT_buttons)
     bpy.utils.register_class(FG_UL_MappingSetList)
     bpy.utils.register_class(FG_UL_ButtonMappingList)
     bpy.utils.register_class(FG_PT_MappingSetsPanel)
@@ -243,4 +277,5 @@ def unregister():
     bpy.utils.unregister_class(FG_PT_MappingSetsPanel)
     bpy.utils.unregister_class(FG_UL_ButtonMappingList)
     bpy.utils.unregister_class(FG_UL_MappingSetList)
+    #bpy.utils.unregister_class(PUPPETSTRINGS_PT_buttons)
 

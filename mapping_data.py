@@ -35,48 +35,69 @@ MAPPING_TYPES = [
     ("other", "Data Path", "","QUESTION",2048),
 ]
 
-GAMEPAD_BUTTONS = [
-    ("lx", "Left Stick X", ""),
-    ("ly", "Left Stick Y", ""),
-    ("lstick", "Left Stick Press", ""),
+class ButtonSetting(bpy.types.PropertyGroup):
+    id: bpy.props.IntProperty(name="Id", default=-1) #type: ignore
+    name: bpy.props.StringProperty(name="Name", default="none") # type: ignore
+    full_name: bpy.props.StringProperty(name="Name", default="none") # type: ignore
+    desc: bpy.props.StringProperty(name="Name", default="none") # type: ignore
+    smooth: bpy.props.IntProperty(name="Smoothing ms", default=150) # type: ignore
+    debounce:bpy.props.IntProperty(name="Debouncing ms", default=50)# type: ignore
 
-    ("rx", "Right Stick X", ""),
-    ("ry", "Right Stick Y", ""),
-    ("rstick", "Right Stick Press", ""),
-
-    ("south", "South Button", "Bottom face button (e.g. Xbox A button)"),
-    ("east", "East Button", "Bottom face button (e.g. Xbox B button)"),
-    ("west", "West Button", "Bottom face button (e.g. Xbox X button)"),
-    ("north", "North Button", "Bottom face button (e.g. Xbox Y button)"),
-
-    ("lshoulder", "Left Shoulder", ""),
-    ("lt", "Left Trigger", ""),
-    ("rshoulder", "Right Shoulder", ""),
-    ("rt", "Right Trigger", ""),
-    ("dpad_up", "D-Pad Up", ""),
-    ("dpad_down", "D-Pad Down", ""),
-    ("dpad_left", "D-Pad Left", ""),
-    ("dpad_right", "D-Pad Right", ""),
-
-    ("back", "Back Button", ""),
-    ("start", "Start Button", ""),
-    ("guide", "Guide Button", ""),
-
-    ("lp1", "Left Paddle 1", "Upper or primary paddle, under your left hand (e.g. Xbox Elite paddle P3, DualSense Edge LB button, Left Joy-Con SL button)"),
-    ("lp2", "Left Paddle 2", "Lower or secondary paddle, under your left hand (e.g. Xbox Elite paddle P4, DualSense Edge left Fn button, Left Joy-Con SR button) "),
-    ("rp1", "Right Paddle 1", "Upper or primary paddle, under your right hand (e.g. Xbox Elite paddle P1, DualSense Edge RB button, Right Joy-Con SR button)"),
-    ("rp2", "Right Paddle 2", "Lower or secondary paddle, under your right hand (e.g. Xbox Elite paddle P2, DualSense Edge right Fn button, Right Joy-Con SL button)"),
-
-    ("misc1", "Misc1 Button", "Additional button (e.g. Xbox Series X share button, PS5 microphone button, Nintendo Switch Pro capture button, Amazon Luna microphone button, Google Stadia capture button)"),
-    ("misc2", "Misc2 Button", "Additional button"), 
-    ("misc3", "Misc3 Button", "Additional button (e.g. Nintendo GameCube left trigger click)"), 
-    ("misc4", "Misc4 Button", "Additional button (e.g. Nintendo GameCube right trigger click)"), 
-    ("misc5", "Misc5 Button", "Additional button"), 
-    ("misc6", "Misc6 Button", "Additional button"), 
-    ("touchbutton", "Touch Button", ""), 
-
-    # Add more as needed
+BUTTON_DATA = [
+    (1000,"lx", "Left Stick X", ""),
+    (1001,"ly", "Left Stick Y", ""),
+    (1002,"rx", "Right Stick X", ""),
+    (1003,"ry", "Right Stick Y", ""),
+    (1004,"lt", "Left Trigger", ""),
+    (1005,"rt", "Right Trigger", ""), 
+    (0,"south", "South Button", "Bottom face button (e.g. Xbox A button)"),
+    (1,"east", "East Button", "Bottom face button (e.g. Xbox B button)"),
+    (2,"west", "West Button", "Bottom face button (e.g. Xbox X button)"),
+    (3,"north", "North Button", "Bottom face button (e.g. Xbox Y button)"),
+    (4,"back", "Back Button", ""),
+    (5,"guide", "Guide Button", ""),
+    (6,"start", "Start Button", ""),
+    (7,"lstick", "Left Stick Press", ""),
+    (8,"rstick", "Right Stick Press", ""),
+    (9,"lshoulder", "Left Shoulder", ""),
+    (10,"rshoulder", "Right Shoulder", ""),
+    (11,"dpad_up", "D-Pad Up", ""),
+    (12,"dpad_down", "D-Pad Down", ""),
+    (13,"dpad_left", "D-Pad Left", ""),
+    (14,"dpad_right", "D-Pad Right", ""),   
+    (16,"rp1", "Right Paddle 1", "Upper or primary paddle, under your right hand (e.g. Xbox Elite paddle P1, DualSense Edge RB button, Right Joy-Con SR button)"),
+    (17,"lp1", "Left Paddle 1", "Upper or primary paddle, under your left hand (e.g. Xbox Elite paddle P3, DualSense Edge LB button, Left Joy-Con SL button)"),
+    (18,"rp2", "Right Paddle 2", "Lower or secondary paddle, under your right hand (e.g. Xbox Elite paddle P2, DualSense Edge right Fn button, Right Joy-Con SL button)"),
+    (19,"lp2", "Left Paddle 2", "Lower or secondary paddle, under your left hand (e.g. Xbox Elite paddle P4, DualSense Edge left Fn button, Left Joy-Con SR button) "),
+    (20,"touchpad", "Touch Button", ""), 
+    (15,"misc1", "Misc1 Button", "Additional button (e.g. Xbox Series X share button, PS5 microphone button, Nintendo Switch Pro capture button, Amazon Luna microphone button, Google Stadia capture button)"),
+    (21,"misc2", "Misc2 Button", "Additional button"), 
+    (22,"misc3", "Misc3 Button", "Additional button (e.g. Nintendo GameCube left trigger click)"), 
+    (23,"misc4", "Misc4 Button", "Additional button (e.g. Nintendo GameCube right trigger click)"), 
+    (24,"misc5", "Misc5 Button", "Additional button"), 
+    (25,"misc6", "Misc6 Button", "Additional button"), 
 ]
+def create_buttons():
+    scene = bpy.context.scene
+    buttons = scene.johnnygizmo_puppetstrings_buttons_settings
+    buttons.clear()
+
+    for b in BUTTON_DATA:
+        item = buttons.add()
+        item.id = b[0]
+        item.name = b[1]
+        item.full_name = b[2]
+        item.desc = b[3]
+
+        
+def get_buttons(a,aa):
+    output = []
+    for b in BUTTON_DATA:
+        output.append((b[1],b[2],b[3]))
+    return output
+
+
+        
 
 class ButtonMapping(bpy.types.PropertyGroup):
     show_panel: bpy.props.BoolProperty(
@@ -102,7 +123,7 @@ class ButtonMapping(bpy.types.PropertyGroup):
     expression: bpy.props.StringProperty(name="Expression", default=" = value") # type: ignore
     button: bpy.props.EnumProperty(
         name="Button",
-        items=GAMEPAD_BUTTONS,
+        items=get_buttons,
         description="Gamepad button"
     ) # type: ignore
     invert: bpy.props.BoolProperty(name="Invert", default=False) # type: ignore
@@ -124,9 +145,12 @@ class ButtonMapping(bpy.types.PropertyGroup):
         items=VECTOR_AXES,
         description="Axis to map"
     ) # type: ignore
+
+    smoothing_ms: bpy.props.IntProperty(name="Smoothing ms", default = 100) #type: ignore
+    debounce_ms: bpy.props.IntProperty(name="Debounce ms", default = 50) #type: ignore 
     data_path: bpy.props.StringProperty(name="Data Path") # type: ignore
     sub_data_path: bpy.props.StringProperty(name="Sub Data Path") # type: ignore
-    curve_owner: bpy.props.PointerProperty(type=bpy.types.Brush)
+    curve_owner: bpy.props.PointerProperty(type=bpy.types.Brush)# type: ignore
 
 class MappingSet(bpy.types.PropertyGroup):
     active: bpy.props.BoolProperty(name="Enabled", default=True) # type: ignore
@@ -134,16 +158,24 @@ class MappingSet(bpy.types.PropertyGroup):
     button_mappings: bpy.props.CollectionProperty(type=ButtonMapping) # type: ignore
     active_button_mapping_index: bpy.props.IntProperty(name="Active Button Mapping Index", default=0) # type: ignore
 
+
+
+
 def register():
+    bpy.utils.register_class(ButtonSetting)
     bpy.utils.register_class(ButtonMapping)
     bpy.utils.register_class(MappingSet)
+    
     bpy.types.Scene.johnnygizmo_puppetstrings_mapping_sets = bpy.props.CollectionProperty(type=MappingSet)
+    bpy.types.Scene.johnnygizmo_puppetstrings_buttons_settings =  bpy.props.CollectionProperty(type=ButtonSetting)
     bpy.types.Scene.johnnygizmo_puppetstrings_active_mapping_set = bpy.props.IntProperty(name="Active Mapping Set", default=0)
 
 
 def unregister():
     del bpy.types.Scene.johnnygizmo_puppetstrings_mapping_sets
     del bpy.types.Scene.johnnygizmo_puppetstrings_active_mapping_set
+    del bpy.types.Scene.johnnygizmo_puppetstrings_buttons_settings
+
     bpy.utils.unregister_class(MappingSet)
     bpy.utils.unregister_class(ButtonMapping)
-
+    bpy.utils.unregister_class(ButtonSetting)

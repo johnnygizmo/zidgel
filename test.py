@@ -1,10 +1,14 @@
-from . import fastgamepad
+from multiprocessing import context
+import sys
+import os
+import math
+from pathlib import Path
+
+
+import fastgamepad
 fastgamepad.init()
-b = fastgamepad.get_buttons()
-print(b)
-ax = fastgamepad.get_axes()
-
-rounded_ax = {k: round(v * 20) / 20 for k, v in ax.items()}
-print(rounded_ax)
-
+print(fastgamepad.get_axes())
+print(fastgamepad.get_buttons())
+fastgamepad.set_smoothing_single(5,2)
+fastgamepad.set_smoothing_single(30,3)
 fastgamepad.quit()

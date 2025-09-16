@@ -2,11 +2,12 @@
 #include <SDL3\SDL.h>
 #include <map>
 #include <iostream>
+#include <cstdio>
 #include <unordered_map>
 using namespace std;
 
 struct EMAState {
-    double emAlpha = 0.2;
+    double emaAlpha = 0.2;
     bool initialized = false;
     float value = 0.0f;
 };
@@ -21,6 +22,7 @@ struct DebounceState {
 struct Input {
     int id = -1;
     int type =0;
+    string name;
     EMAState smoothing;
     DebounceState debounce;
 };
@@ -33,14 +35,84 @@ static std::map<int, DebounceState> buttonStates;
 static Uint64 debounceDelayNS = 30 * 1000000ULL; // 30ms default
 static SDL_Joystick *virtual_joystick = NULL;
 
-
-
 static PyObject* fg_initialized(PyObject* self, PyObject* args) {
     if (gamepad) {
         Py_RETURN_TRUE;
     } else {
         Py_RETURN_FALSE;
     }
+}
+
+static float emaUpdate(EMAState &state, float newValue) {
+    if (!state.initialized) {
+        state.value = newValue;   // first sample just seeds it
+        state.initialized = true;
+    } else {
+        state.value = (float)(emaAlpha * newValue + (1.0 - emaAlpha) * state.value);
+    }
+    return state.value;
+}
+
+
+static int debounceButtonState(int button, int rawState) {
+    Uint64 now = SDL_GetTicksNS();
+    auto &state = inputs[button].debounce;
+
+    if (rawState != state.pendingState) {
+        state.pendingState = rawState;
+        state.lastChangeTime = now;
+    } else {
+        if (rawState != state.stableState &&
+            (now - state.lastChangeTime) >= debounceDelayNS) {
+            state.stableState = rawState;
+        }
+    }
+    return state.stableState;
+}
+
+static float get_button(int id){
+    Input i = inputs[id]; 
+    
+    if(i.type == 1){
+        float value =  SDL_GetGamepadAxis(gamepad, (SDL_GamepadAxis)i.id) / 32767.0f;
+        if(emaAlpha > 0){
+            value =  emaUpdate(inputs[id].smoothing, value);
+        }
+        return value;
+    } else {
+        int value = SDL_GetGamepadButton(gamepad, (SDL_GamepadButton)i.id);
+        if (i.debounce.debounceDelayNS > 0){
+            value = debounceButtonState(id,value);
+        }
+        //value = emaUpdate(inputs[id].smoothing, value);
+        return value;
+    }
+    
+}
+
+
+static PyObject* fg_get_button_list(PyObject* self, PyObject* args) {
+    PyObject* listObj;
+
+    if (!PyArg_ParseTuple(args, "O!", &PyList_Type, &listObj)) {
+        return nullptr;
+    }
+
+    Py_ssize_t size = PyList_Size(listObj);
+    
+    PyObject* dict = PyDict_New();
+    for (Py_ssize_t i = 0; i < size; i++) {
+        PyObject* item = PyList_GetItem(listObj, i);  // borrowed reference
+        if (!PyLong_Check(item)) {
+            PyErr_SetString(PyExc_TypeError, "List elements must be integers");
+            return nullptr;
+        }
+        long value = PyLong_AsLong(item);
+        float current = get_button(value);
+        PyDict_SetItemString(dict, inputs[value].name.c_str(), PyFloat_FromDouble(current));        
+    }
+    return dict;
+    //Py_RETURN_NONE;
 }
 
 
@@ -63,17 +135,41 @@ static int debounceButton(int button, int rawState) {
 
     return state.stableState;
 }
-
-
-static float emaUpdate(EMAState &state, float newValue) {
-    if (!state.initialized) {
-        state.value = newValue;   // first sample just seeds it
-        state.initialized = true;
-    } else {
-        state.value = (float)(emaAlpha * newValue + (1.0 - emaAlpha) * state.value);
+static PyObject* fg_set_smoothing_single(PyObject* self, PyObject* args) {
+    int ms;
+    int id;
+    if (!PyArg_ParseTuple(args, "ii", &ms,&id)) {
+        return NULL;
     }
-    return state.value;
+    
+    if (ms == 0) {
+        inputs[id].smoothing.emaAlpha = 0.0; // no smoothing
+        inputs[id].smoothing.initialized = false; // reset EMA state
+        Py_RETURN_NONE;
+    }
+    
+    // Assume poll rate ~60 Hz (~16 ms per sample).
+    // Equivalent N samples = ms / 16.
+    // Alpha = 2 / (N + 1)
+    double N = (double)ms / 16.0;
+    if (N < 1) N = 1;
+    inputs[id].smoothing.emaAlpha = 2.0 / (N + 1.0);
+    Py_RETURN_NONE;
 }
+static PyObject* fg_set_debounce_single(PyObject* self, PyObject* args) {
+    int ms;
+    int id;
+    
+    if (!PyArg_ParseTuple(args, "ii", &ms,&id)) {
+        return NULL;
+    }
+    debounceDelayNS = (Uint64)ms * 1000000ULL;
+
+     return Py_BuildValue("l", debounceDelayNS);
+    //Py_RETURN_NONE;
+}
+
+
 
 static PyObject* fg_set_smoothing(PyObject* self, PyObject* args) {
     int ms;
@@ -83,9 +179,10 @@ static PyObject* fg_set_smoothing(PyObject* self, PyObject* args) {
     
     if (ms == 0) {
         emaAlpha = 0.0; // no smoothing
-        for (int i = 0; i < 6; i++) {
-            axisEMA[i].initialized = false; // reset EMA state
-        }   
+       for (auto& [key, value] : inputs) {
+            value.smoothing.initialized = false;
+        }
+
         Py_RETURN_NONE;
     }
     
@@ -196,47 +293,33 @@ static PyObject* fg_get_axes(PyObject* self, PyObject* args) {
         return PyErr_Format(PyExc_RuntimeError, "Gamepad not initialized");
     }
     SDL_PumpEvents();
-    float lx = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFTX) / 32767.0f;
-    float ly = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFTY) / 32767.0f;
-    float rx = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_RIGHTX) / 32767.0f;
-    float ry = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_RIGHTY) / 32767.0f;
-    float lt = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER) / 32767.0f;
-    float rt = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER) / 32767.0f;
-    
-    if(emaAlpha > 0.0) {
-        // Apply EMA smoothing
-        lx = emaUpdate(axisEMA[0], lx);
-        ly = emaUpdate(axisEMA[1], ly);
-        rx = emaUpdate(axisEMA[2], rx);
-        ry = emaUpdate(axisEMA[3], ry);
-        lt = emaUpdate(axisEMA[4], lt);
-        rt = emaUpdate(axisEMA[5], rt);
-    }
-
-    lx = emaUpdate(axisEMA[0], lx);
-    ly = emaUpdate(axisEMA[1], ly);
-    rx = emaUpdate(axisEMA[2], rx);
-    ry = emaUpdate(axisEMA[3], ry);
-    lt = emaUpdate(axisEMA[4], lt);
-    rt = emaUpdate(axisEMA[5], rt);
-
     PyObject* dict = PyDict_New();
-    PyDict_SetItemString(dict, "lx", PyFloat_FromDouble(lx));
-    PyDict_SetItemString(dict, "ly", PyFloat_FromDouble(ly));   
-    PyDict_SetItemString(dict, "rx", PyFloat_FromDouble(rx));
-    PyDict_SetItemString(dict, "ry", PyFloat_FromDouble(ry));
-    PyDict_SetItemString(dict, "lt", PyFloat_FromDouble(lt));
-    PyDict_SetItemString(dict, "rt", PyFloat_FromDouble(rt));
-    return dict;
-}
+    PyDict_SetItemString(dict, "lx", PyFloat_FromDouble(get_button(1000)));
+    PyDict_SetItemString(dict, "ly", PyFloat_FromDouble(get_button(1001)));   
+    PyDict_SetItemString(dict, "rx", PyFloat_FromDouble(get_button(1002)));
+    PyDict_SetItemString(dict, "ry", PyFloat_FromDouble(get_button(1003)));
+    PyDict_SetItemString(dict, "lt", PyFloat_FromDouble(get_button(1004)));
+    PyDict_SetItemString(dict, "rt", PyFloat_FromDouble(get_button(1005)));
+    return dict;    
+    
+    // float lx = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFTX) / 32767.0f;
+    // float ly = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFTY) / 32767.0f;
+    // float rx = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_RIGHTX) / 32767.0f;
+    // float ry = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_RIGHTY) / 32767.0f;
+    // float lt = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER) / 32767.0f;
+    // float rt = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER) / 32767.0f;
+    
+    // if(emaAlpha > 0.0) {
+    //     // Apply EMA smoothing
+    //     lx = emaUpdate(axisEMA[0], lx);
+    //     ly = emaUpdate(axisEMA[1], ly);
+    //     rx = emaUpdate(axisEMA[2], rx);
+    //     ry = emaUpdate(axisEMA[3], ry);
+    //     lt = emaUpdate(axisEMA[4], lt);
+    //     rt = emaUpdate(axisEMA[5], rt);
+    // }
 
-static int get_debounced_button(int button) {
-    if(debounceDelayNS == 0) {
-        // No debouncing, return raw state
-        return SDL_GetGamepadButton(gamepad, (SDL_GamepadButton)button);
-    }   
-    int rawState = SDL_GetGamepadButton(gamepad, (SDL_GamepadButton)button);
-    return debounceButton(button, rawState);
+
 }
 
 static PyObject* fg_get_buttons(PyObject* self, PyObject* args) {
@@ -244,72 +327,38 @@ static PyObject* fg_get_buttons(PyObject* self, PyObject* args) {
         return PyErr_Format(PyExc_RuntimeError, "Gamepad not initialized");
     }
     SDL_PumpEvents();
-    // SDL3 button constants for A, B, X, Y
-
-    int south = get_debounced_button(SDL_GAMEPAD_BUTTON_SOUTH);  // A
-    int east = get_debounced_button(SDL_GAMEPAD_BUTTON_EAST); // B
-    int west = get_debounced_button(SDL_GAMEPAD_BUTTON_WEST);  // X
-    int north = get_debounced_button(SDL_GAMEPAD_BUTTON_NORTH);    // Y
-
-    int lshoulder = get_debounced_button(SDL_GAMEPAD_BUTTON_LEFT_SHOULDER);
-    int rshoulder = get_debounced_button(SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER);
-
-    int lstick = get_debounced_button(SDL_GAMEPAD_BUTTON_LEFT_STICK);
-    int rstick = get_debounced_button(SDL_GAMEPAD_BUTTON_RIGHT_STICK);
-
-    int dpad_up = get_debounced_button(SDL_GAMEPAD_BUTTON_DPAD_UP);
-    int dpad_down = get_debounced_button(SDL_GAMEPAD_BUTTON_DPAD_DOWN);
-    int dpad_left = get_debounced_button(SDL_GAMEPAD_BUTTON_DPAD_LEFT);
-    int dpad_right = get_debounced_button(SDL_GAMEPAD_BUTTON_DPAD_RIGHT);
-
-    int misc1 = get_debounced_button(SDL_GAMEPAD_BUTTON_MISC1);
-    int misc2 = get_debounced_button(SDL_GAMEPAD_BUTTON_MISC2);
-    int misc3 = get_debounced_button(SDL_GAMEPAD_BUTTON_MISC3);
-    int misc4 = get_debounced_button(SDL_GAMEPAD_BUTTON_MISC4);
-    int misc5 = get_debounced_button(SDL_GAMEPAD_BUTTON_MISC5);
-    int misc6 = get_debounced_button(SDL_GAMEPAD_BUTTON_MISC6);
-
-    int back = get_debounced_button(SDL_GAMEPAD_BUTTON_BACK);
-    int start = get_debounced_button(SDL_GAMEPAD_BUTTON_START);
-    int guide = get_debounced_button(SDL_GAMEPAD_BUTTON_GUIDE);
-
-    int lp1 = get_debounced_button(SDL_GAMEPAD_BUTTON_LEFT_PADDLE1);
-    int lp2 = get_debounced_button(SDL_GAMEPAD_BUTTON_LEFT_PADDLE2);
-    int rp1 = get_debounced_button(SDL_GAMEPAD_BUTTON_RIGHT_PADDLE1);
-    int rp2 = get_debounced_button(SDL_GAMEPAD_BUTTON_RIGHT_PADDLE2);
-
-    int touchbutton = get_debounced_button(SDL_GAMEPAD_BUTTON_TOUCHPAD);
-
-
+    
     PyObject* dict = PyDict_New();
-    PyDict_SetItemString(dict, "south", PyLong_FromLong(south));
-    PyDict_SetItemString(dict, "east", PyLong_FromLong(east));
-    PyDict_SetItemString(dict, "west", PyLong_FromLong(west));
-    PyDict_SetItemString(dict, "north", PyLong_FromLong(north));
-    PyDict_SetItemString(dict, "lshoulder", PyLong_FromLong(lshoulder));
-    PyDict_SetItemString(dict, "rshoulder", PyLong_FromLong(rshoulder));
-    PyDict_SetItemString(dict, "lstick", PyLong_FromLong(lstick));
-    PyDict_SetItemString(dict, "rstick", PyLong_FromLong(rstick));
-    PyDict_SetItemString(dict, "dpad_up", PyLong_FromLong(dpad_up));
-    PyDict_SetItemString(dict, "dpad_down", PyLong_FromLong(dpad_down));
-    PyDict_SetItemString(dict, "dpad_left", PyLong_FromLong(dpad_left));
-    PyDict_SetItemString(dict, "dpad_right", PyLong_FromLong(dpad_right));
-    PyDict_SetItemString(dict, "back", PyLong_FromLong(back));
-    PyDict_SetItemString(dict, "start", PyLong_FromLong(start));
-    PyDict_SetItemString(dict, "guide", PyLong_FromLong(guide));
-    PyDict_SetItemString(dict, "lp1", PyLong_FromLong(lp1));
-    PyDict_SetItemString(dict, "lp2", PyLong_FromLong(lp2));
-    PyDict_SetItemString(dict, "rp1", PyLong_FromLong(rp1));
-    PyDict_SetItemString(dict, "rp2", PyLong_FromLong(rp2));
-    PyDict_SetItemString(dict, "misc1", PyLong_FromLong(misc1));
-    PyDict_SetItemString(dict, "misc2", PyLong_FromLong(misc2));
-    PyDict_SetItemString(dict, "misc3", PyLong_FromLong(misc3));
-    PyDict_SetItemString(dict, "misc4", PyLong_FromLong(misc4));
-    PyDict_SetItemString(dict, "misc5", PyLong_FromLong(misc5));
-    PyDict_SetItemString(dict, "misc6", PyLong_FromLong(misc6));
-    PyDict_SetItemString(dict, "touchbutton", PyLong_FromLong(touchbutton));
+    PyDict_SetItemString(dict, "south", PyLong_FromLong(get_button(0)));
+    PyDict_SetItemString(dict, "east", PyLong_FromLong(get_button(1)));
+    PyDict_SetItemString(dict, "west", PyLong_FromLong(get_button(2)));
+    PyDict_SetItemString(dict, "north", PyLong_FromLong(get_button(3)));
+    PyDict_SetItemString(dict, "back", PyLong_FromLong(get_button(4)));
+    PyDict_SetItemString(dict, "guide", PyLong_FromLong(get_button(5)));
+    PyDict_SetItemString(dict, "start", PyLong_FromLong(get_button(6)));
+    PyDict_SetItemString(dict, "lstick", PyLong_FromLong(get_button(7)));
+    PyDict_SetItemString(dict, "rstick", PyLong_FromLong(get_button(8)));   
+    PyDict_SetItemString(dict, "lshoulder", PyLong_FromLong(get_button(9)));
+    PyDict_SetItemString(dict, "rshoulder", PyLong_FromLong(get_button(10)));
+    PyDict_SetItemString(dict, "dpad_up", PyLong_FromLong(get_button(11)));
+    PyDict_SetItemString(dict, "dpad_down", PyLong_FromLong(get_button(12)));
+    PyDict_SetItemString(dict, "dpad_left", PyLong_FromLong(get_button(13)));
+    PyDict_SetItemString(dict, "dpad_right", PyLong_FromLong(get_button(14)));
+    PyDict_SetItemString(dict, "misc1", PyLong_FromLong(get_button(15)));
+    PyDict_SetItemString(dict, "rp1", PyLong_FromLong(get_button(16)));
+    PyDict_SetItemString(dict, "lp1", PyLong_FromLong(get_button(17)));
+    PyDict_SetItemString(dict, "rp2", PyLong_FromLong(get_button(18)));
+    PyDict_SetItemString(dict, "lp2", PyLong_FromLong(get_button(19)));
+    PyDict_SetItemString(dict, "touchbutton", PyLong_FromLong(get_button(20)));
+    PyDict_SetItemString(dict, "misc2", PyLong_FromLong(get_button(21)));
+    PyDict_SetItemString(dict, "misc3", PyLong_FromLong(get_button(22)));
+    PyDict_SetItemString(dict, "misc4", PyLong_FromLong(get_button(23)));
+    PyDict_SetItemString(dict, "misc5", PyLong_FromLong(get_button(24)));
+    PyDict_SetItemString(dict, "misc6", PyLong_FromLong(get_button(25)));
     return dict;
 }
+
+
 
 static PyObject* fg_quit(PyObject* self, PyObject* args) {
     if (gamepad) {
@@ -325,8 +374,11 @@ static PyMethodDef FastGamepadMethods[] = {
     {"initialized", fg_initialized, METH_NOARGS, "Check if gamepad is initialized"},
     {"get_axes", fg_get_axes, METH_NOARGS, "Get joystick axes"},
     {"get_buttons", fg_get_buttons, METH_NOARGS, "Get A/B/X/Y button states"},
+    {"get_button_list",fg_get_button_list, METH_VARARGS,"Get Specific Button States"},
     {"set_smoothing", fg_set_smoothing, METH_VARARGS, "Set axis smoothing in ms"},
     {"set_debounce", fg_set_debounce, METH_VARARGS, "Set button debounce window (ms)"},
+    {"set_smoothing_single", fg_set_smoothing_single, METH_VARARGS, "Set axis smoothing in ms"},
+    {"set_debounce_single", fg_set_debounce_single, METH_VARARGS, "Set button debounce window (ms)"},
     {"quit", fg_quit, METH_NOARGS, "Close gamepad and quit SDL"},
     {NULL, NULL, 0, NULL}
 };
@@ -340,5 +392,40 @@ static struct PyModuleDef fastgamepadmodule = {
 };
 
 PyMODINIT_FUNC PyInit_fastgamepad(void) {
+    inputs[SDL_GAMEPAD_AXIS_LEFTX + 1000] = {SDL_GAMEPAD_AXIS_LEFTX,1,"lx"};
+    inputs[SDL_GAMEPAD_AXIS_LEFTY + 1000] = {SDL_GAMEPAD_AXIS_LEFTY,1,"ly"};
+    inputs[SDL_GAMEPAD_AXIS_RIGHTX + 1000] = {SDL_GAMEPAD_AXIS_RIGHTX,1,"rx"};
+    inputs[SDL_GAMEPAD_AXIS_RIGHTY + 1000] = {SDL_GAMEPAD_AXIS_RIGHTY,1,"ry"};
+    inputs[SDL_GAMEPAD_AXIS_LEFT_TRIGGER + 1000] = {SDL_GAMEPAD_AXIS_LEFT_TRIGGER,1,"lt"};
+    inputs[SDL_GAMEPAD_AXIS_RIGHT_TRIGGER + 1000] = {SDL_GAMEPAD_AXIS_RIGHT_TRIGGER,1,"rt"};
+
+    inputs[SDL_GAMEPAD_BUTTON_SOUTH] = {SDL_GAMEPAD_BUTTON_SOUTH,0,"south"};
+    inputs[SDL_GAMEPAD_BUTTON_EAST] = {SDL_GAMEPAD_BUTTON_EAST,0,"east"};
+    inputs[SDL_GAMEPAD_BUTTON_WEST] = {SDL_GAMEPAD_BUTTON_WEST,0,"west"};
+    inputs[SDL_GAMEPAD_BUTTON_NORTH] = {SDL_GAMEPAD_BUTTON_NORTH,0,"north"};
+
+    inputs[SDL_GAMEPAD_BUTTON_BACK] = {SDL_GAMEPAD_BUTTON_BACK,0,"back"};
+    inputs[SDL_GAMEPAD_BUTTON_GUIDE] = {SDL_GAMEPAD_BUTTON_GUIDE,0,"guide"};
+    inputs[SDL_GAMEPAD_BUTTON_START] = {SDL_GAMEPAD_BUTTON_START,0,"start"};
+    inputs[SDL_GAMEPAD_BUTTON_LEFT_STICK] = {SDL_GAMEPAD_BUTTON_LEFT_STICK,0,"lstick"};
+    inputs[SDL_GAMEPAD_BUTTON_RIGHT_STICK] = {SDL_GAMEPAD_BUTTON_RIGHT_STICK,0,"rstick"};
+    inputs[SDL_GAMEPAD_BUTTON_LEFT_SHOULDER] = {SDL_GAMEPAD_BUTTON_LEFT_SHOULDER,0,"lshoulder"};
+    inputs[SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER] = {SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER,0,"rshoulder"};
+    inputs[SDL_GAMEPAD_BUTTON_DPAD_UP] = {SDL_GAMEPAD_BUTTON_DPAD_UP,0,"dpad_up"};
+    inputs[SDL_GAMEPAD_BUTTON_DPAD_DOWN] = {SDL_GAMEPAD_BUTTON_DPAD_DOWN,0,"dpad_down"};
+    inputs[SDL_GAMEPAD_BUTTON_DPAD_LEFT] = {SDL_GAMEPAD_BUTTON_DPAD_LEFT,0,"dpad_left"};
+    inputs[SDL_GAMEPAD_BUTTON_DPAD_RIGHT] = {SDL_GAMEPAD_BUTTON_DPAD_RIGHT,0,"dpad_right"};
+    inputs[SDL_GAMEPAD_BUTTON_MISC1] = {SDL_GAMEPAD_BUTTON_MISC1,0,"misc1"};
+    inputs[SDL_GAMEPAD_BUTTON_RIGHT_PADDLE1] = {SDL_GAMEPAD_BUTTON_RIGHT_PADDLE1,0,"rp1"};
+    inputs[SDL_GAMEPAD_BUTTON_LEFT_PADDLE1] = {SDL_GAMEPAD_BUTTON_LEFT_PADDLE1,0,"lp1"};
+    inputs[SDL_GAMEPAD_BUTTON_RIGHT_PADDLE2] = {SDL_GAMEPAD_BUTTON_RIGHT_PADDLE2,0,"rp2"};
+    inputs[SDL_GAMEPAD_BUTTON_LEFT_PADDLE2] = {SDL_GAMEPAD_BUTTON_LEFT_PADDLE2,0,"lp2"};
+    inputs[SDL_GAMEPAD_BUTTON_TOUCHPAD] = {SDL_GAMEPAD_BUTTON_TOUCHPAD,0,"touchpad"};
+    inputs[SDL_GAMEPAD_BUTTON_MISC2] = {SDL_GAMEPAD_BUTTON_MISC2,0,"misc2"};
+    inputs[SDL_GAMEPAD_BUTTON_MISC3] = {SDL_GAMEPAD_BUTTON_MISC3,0,"misc3"};
+    inputs[SDL_GAMEPAD_BUTTON_MISC4] = {SDL_GAMEPAD_BUTTON_MISC4,0,"misc4"};   
+    inputs[SDL_GAMEPAD_BUTTON_MISC5] = {SDL_GAMEPAD_BUTTON_MISC5,0,"misc5"};
+    inputs[SDL_GAMEPAD_BUTTON_MISC6] = {SDL_GAMEPAD_BUTTON_MISC6,0,"misc6"};
+
     return PyModule_Create(&fastgamepadmodule);
 }
