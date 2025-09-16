@@ -21,9 +21,9 @@ Controller FPS: How often the controller is polled
 
 Keyframe Interval: How often to record keyframes
 
-Smoothing ms: Length of Time for Smoothing Calculation
+Smoothing ms: Length of Time for Smoothing Calculation on Axis & Trigger Controls
 
-Debounce Time ms: Length of time to prevent jittery buttons
+Debounce Time ms: Length of time to prevent jittery button presses
 
 Mapping Set: A grouping of key mappings, you will need at least one, if it is unchecked the mapping has no effect on the recording
 
@@ -46,3 +46,5 @@ Button Mappings: A specific key mapping. if it is unchecked the mapping has no e
         Easing: An easing method to be applied at the controller level before value is returned to the script
 
 
+TODO:
+    Make a way to set smoothing per button

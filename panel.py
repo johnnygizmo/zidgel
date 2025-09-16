@@ -13,27 +13,27 @@ class FG_PT_MappingSetsPanel(bpy.types.Panel):
         scene = context.scene
         settings  = scene.johnnygizmo_puppetstrings_settings
         
-        
+        row = layout.row()
         if not fastgamepad.initialized():
-            layout.operator("fg.start_controller", text="Enable Controller", icon="STRIP_COLOR_01").action = "START"
+            row.operator("fg.start_controller", text="Controller Off", icon="STRIP_COLOR_01").action = "START"
         else:
-            layout.operator("fg.start_controller", text="Controller Running (esc to stop)", icon="STRIP_COLOR_04").action = "STOP"
+            row.operator("fg.start_controller", text="Controller On", icon="STRIP_COLOR_04").action = "STOP"
 
 
         if context.screen.is_animation_playing:
             if settings.enable_record:
-                layout.prop(settings, "enable_record",text="Recording", icon="RECORD_ON")
+                row.prop(settings, "enable_record",text="Recording", icon="RECORD_ON")
             elif settings.use_punch and not settings.enable_record:
-                layout.prop(settings, "enable_record",text="Punched Out", icon="RECORD_OFF")
+                row.prop(settings, "enable_record",text="Punched Out", icon="RECORD_OFF")
             elif not settings.use_punch and not settings.enable_record:
-                layout.prop(settings, "enable_record",text="Playing", icon="NODE_SOCKET_SHADER")
+                row.prop(settings, "enable_record",text="Playing", icon="NODE_SOCKET_SHADER")
         else:
             if settings.enable_record and not settings.use_punch:
-                layout.prop(settings, "enable_record",text="Recording Armed", icon="RECORD_ON")
+                row.prop(settings, "enable_record",text="Recording Armed", icon="RECORD_ON")
             elif settings.use_punch:
-                layout.prop(settings, "enable_record",text="Recording Armed (punch armed)", icon="RECORD_ON")
+                row.prop(settings, "enable_record",text="Recording Armed (punch armed)", icon="RECORD_ON")
             else:
-                 layout.prop(settings, "enable_record",text="Recording Disarmed", icon="RECORD_OFF")
+                 row.prop(settings, "enable_record",text="Recording Disarmed", icon="RECORD_OFF")
 
 
         # Timeline marker dropdowns for punch in/out
@@ -45,12 +45,11 @@ class FG_PT_MappingSetsPanel(bpy.types.Panel):
 
         row.prop_search(context.scene.johnnygizmo_puppetstrings_settings, "punch_in_marker", context.scene, "timeline_markers", text="In", icon='IMPORT')
         row.prop_search(context.scene.johnnygizmo_puppetstrings_settings, "punch_out_marker", context.scene, "timeline_markers", text="Out", icon='EXPORT')
-
+        row = layout.row()
         row.prop(context.scene.johnnygizmo_puppetstrings_settings, "pre_roll")
         # row.prop(context.scene.johnnygizmo_puppetstrings_settings, "punch_in")
         # row.prop(context.scene.johnnygizmo_puppetstrings_settings, "punch_out")
 
-        row = layout.row()
         row.prop(context.scene.johnnygizmo_puppetstrings_settings, "one_shot", text="Prevent Looping Animation")
         
         row = layout.row()
