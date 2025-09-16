@@ -51,7 +51,9 @@ class FG_PT_MappingSetsPanel(bpy.types.Panel):
         # row.prop(context.scene.johnnygizmo_puppetstrings_settings, "punch_out")
 
         row.prop(context.scene.johnnygizmo_puppetstrings_settings, "one_shot", text="Prevent Looping Animation")
-        
+        row = layout.row()
+        row.prop(context.scene.johnnygizmo_puppetstrings_settings, "auto_simplify", text="Auto-Simplify")
+      
         row = layout.row()
         row.operator("puppetstrings.playback", text="Play", icon="PLAY").action = "PLAY"
 

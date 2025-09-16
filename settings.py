@@ -87,6 +87,17 @@ class JOHNNYGIZMO_PuppetStringsSettings(bpy.types.PropertyGroup):
         default=False,
     )  # type: ignore
     
+    auto_simplify:  bpy.props.EnumProperty(
+        name="Auto-Simplify",
+        description="Automatically Enable/Disable Simplify on Playback",
+        items=[
+            ("none","None","Disable"),
+            ("rec","Record","Only Disable if Record or Punch is Enabled"),
+            ("play","Play/Rec","Disable during any playback/record")
+        ],
+        default="none",
+    )  # type: ignore
+    
 
 
 def register():

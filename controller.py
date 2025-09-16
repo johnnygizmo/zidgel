@@ -240,10 +240,20 @@ def post_playback_handler(scene,depsgrap):
             curve = getCurve(mapping,settings)
             if curve: curve.mute = False
 
+    if settings.auto_simplify == "rec" and (settings.use_punch or settings.enable_record):
+        scene.render.use_simplify = False
+    elif settings.auto_simplify == "play":
+        scene.render.use_simplify = False 
+
 def pre_playback_handler(scene,depsgrap):
     settings = scene.johnnygizmo_puppetstrings_settings 
     mapping_sets = scene.johnnygizmo_puppetstrings_mapping_sets
     active_mapping_set = mapping_sets[scene.johnnygizmo_puppetstrings_active_mapping_set]
+
+    if settings.auto_simplify == "rec" and (settings.use_punch or settings.enable_record):
+        scene.render.use_simplify = True
+    elif settings.auto_simplify == "play":
+        scene.render.use_simplify = True 
 
     if active_mapping_set.active == True:
         for mapping in active_mapping_set.button_mappings:
