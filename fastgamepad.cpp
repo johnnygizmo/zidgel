@@ -38,16 +38,13 @@ static SDL_Haptic* haptic = NULL;
 static SDL_HapticID* haptics = NULL;
 
 static PyObject *run_haptic(PyObject* self, PyObject* args){
-    cout << "rumble"<< endl;
-
     int ms;
     int f1;
     int f2;
-    if (!PyArg_ParseTuple(args, "iii",&f1, &f1, &ms)) {
+    if (!PyArg_ParseTuple(args, "iii",&f1, &f2, &ms)) {
         return NULL;
     }
     SDL_RumbleGamepad(gamepad,  f1, f2, ms);
-    SDL_Delay(ms);
     Py_RETURN_NONE;
 }
 

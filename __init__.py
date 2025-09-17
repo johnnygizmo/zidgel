@@ -17,7 +17,6 @@ from . import panel
 from . import mapping_data
 from . import playback
 
-
 def register(): 
     settings.register()
     mapping_data.register()

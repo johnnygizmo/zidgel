@@ -1,63 +1,79 @@
-Puppetstrings
+# Puppetstrings
+*Johnny Matthews*
+## What's New
 
+**Version 1.0.6**
 
+* Rumble on Punch-In or Punch-Out
+* Rumble on Start Record
 
--- What's New
-Version 1.0.5
-    Posebone mappings will auto-mute now when recording.
-    
-    When recording over previous keyframes with a lower keyframe rate, the non-keyframe frames will have keyframes deleted
+**Version 1.0.5**
 
+* Posebone mappings will auto-mute now when recording.
+* When recording over previous keyframes with a lower keyframe rate, the non-keyframe frames will have keyframes deleted.
 
+---
 
--- Instructions
+## Instructions
 
-Plug in Controller
-- In the 3d viewport N panel, press the "Enable Controller" it should say "Controller Running"
+### Setup
 
-Start Button: Start the play control
-Back Button:
-    When Playing, stops playback
-    When Stopped, goes to start frame
+1. Plug in Controller.
+2. In the 3D Viewport **N panel**, press **Enable Controller** – it should say *Controller Running*.
 
-Arm recording without punch to record at all times.
+### Controls
 
-Create markers in the timeline and choose them for punch points, pre-roll is optional
-When punch is enabled (click the arm circle next to punch in) it will always record in punch area.
-When no punch points are selected, recording will happen at all frames.
+* **Start Button**: Start the play control.
+* **Back Button**:
 
-Prevent Looping Animation: When the playback gets to the final frame, playback is cancelled rather than looping
+  * When Playing: stops playback.
+  * When Stopped: goes to start frame.
 
-Auto-Simplify: Enable/Disable the render settings "simplify" panel on recording or recording/playback.
+### Recording
 
-Controller FPS: How often the controller is polled
+* **Arm recording without punch** → records at all times.
+* **Punch recording**:
 
-Keyframe Interval: How often to record keyframes
+  * Create markers in the timeline and choose them for punch points (pre-roll optional).
+  * When punch is enabled (click the *arm circle* next to punch in), it always records in the punch area.
+  * When no punch points are selected, recording happens at all frames.
 
-Smoothing ms: Length of Time for Smoothing Calculation on Axis & Trigger Controls
+### Options
 
-Debounce Time ms: Length of time to prevent jittery button presses
+* **Prevent Looping Animation**: Playback cancels at the final frame instead of looping.
+* **Auto-Simplify**: Toggles render settings "Simplify" panel during recording or playback.
+* **Controller FPS**: How often the controller is polled.
+* **Keyframe Interval**: How often to record keyframes.
+* **Smoothing (ms)**: Time window for smoothing axis & trigger controls.
+* **Debounce Time (ms)**: Delay to prevent jittery button presses.
 
-Mapping Set: A grouping of key mappings, you will need at least one, if it is unchecked the mapping has no effect on the recording
+### Mappings
 
-Button Mappings: A specific key mapping. if it is unchecked the mapping has no effect on the recording
-    Checkbox: Enable this mapping for processing
-    Eye: Show or hide mapping details
-    Button: Axes or Button to map to
-    Object: Object to get mapping for
-    Mapping Type: What kind of property is being mapped
-        Location / Rotation / Scale: An Axis to Map is Offered
-        Shape Key: A listing of shape keys on the object is offered
-        Modifier/Data Path: These are still in development for ease of use
-    Operation:
-        Direct Value: Take the value directly from the controller
-        Curve: Map the controller value to a curve. Use the curve tools to extend the clipping
-        Inverted Button: rather than 0=Off 1=On, it is 1=Off, 0=On
-        Inverted Axis: rather than -1 to 1 it is 1 to -1
-        Assignment Expression: using the word 'value' write an expression starting with "=" in valid python
-            e.g.     = value * 2
-        Easing: An easing method to be applied at the controller level before value is returned to the script
+* **Mapping Set**: Group of key mappings. Needs at least one. If unchecked, the set has no effect.
+* **Button Mappings**: Specific key mappings. If unchecked, the mapping has no effect.
 
+  * **Checkbox**: Enable this mapping for processing.
+  * **Eye**: Show or hide mapping details.
+  * **Button**: Axis or Button to map to.
+  * **Object**: Object to apply mapping.
+  * **Mapping Type**:
 
-TODO:
-    Make a way to set smoothing per button
+    * *Location / Rotation / Scale*: Axis to map is offered.
+    * *Shape Key*: Lists available shape keys.
+    * *Modifier / Data Path*: Still in development.
+  * **Operation**:
+
+    * *Direct Value*: Use value directly from controller.
+    * *Curve*: Map controller value to a curve (extend with curve tools).
+    * *Inverted Button*: 0 = On, 1 = Off.
+    * *Inverted Axis*: Flips -1 to 1 → 1 to -1.
+    * *Assignment Expression*: Write expression with `value` (start with `=`).
+
+      * Example: `= value * 2`
+    * *Easing*: Apply easing method at controller level before returning to script.
+
+---
+
+## TODO
+
+* Make a way to set smoothing per button.
