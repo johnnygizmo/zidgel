@@ -33,7 +33,24 @@ static EMAState axisEMA[6];   // lx, ly, rx, ry, lt, rt
 static double emaAlpha = 0.2; // default smoothing factor
 static std::map<int, DebounceState> buttonStates; 
 static Uint64 debounceDelayNS = 30 * 1000000ULL; // 30ms default
-static SDL_Joystick *virtual_joystick = NULL;
+static SDL_Joystick* virtual_joystick = NULL;
+static SDL_Haptic* haptic = NULL;
+static SDL_HapticID* haptics = NULL;
+
+static PyObject *run_haptic(PyObject* self, PyObject* args){
+    cout << "rumble"<< endl;
+
+    int ms;
+    int f1;
+    int f2;
+    if (!PyArg_ParseTuple(args, "iii",&f1, &f1, &ms)) {
+        return NULL;
+    }
+    SDL_RumbleGamepad(gamepad,  f1, f2, ms);
+    SDL_Delay(ms);
+    Py_RETURN_NONE;
+}
+
 
 static PyObject* fg_initialized(PyObject* self, PyObject* args) {
     if (gamepad) {
@@ -208,7 +225,7 @@ static PyObject* fg_set_debounce(PyObject* self, PyObject* args) {
 }
 
 static PyObject* fg_init(PyObject* self, PyObject* args) {
-    if (SDL_Init(SDL_INIT_GAMEPAD | SDL_INIT_JOYSTICK ) == 0) {
+    if (SDL_Init(SDL_INIT_GAMEPAD | SDL_INIT_JOYSTICK | SDL_INIT_HAPTIC ) == 0) {
         return PyErr_Format(PyExc_RuntimeError, "SDL_Init failed: %s", SDL_GetError());
     }
 
@@ -279,11 +296,15 @@ static PyObject* fg_init(PyObject* self, PyObject* args) {
             SDL_Quit();
             return PyErr_Format(PyExc_RuntimeError, "Failed to open gamepad: %s", SDL_GetError());
         }
+        
         if (gamepad_ids) {
             SDL_free(gamepad_ids);
             gamepad_ids = NULL;
         }
-    }\
+    }
+
+    
+
     Py_RETURN_NONE;
 }
 
@@ -301,25 +322,7 @@ static PyObject* fg_get_axes(PyObject* self, PyObject* args) {
     PyDict_SetItemString(dict, "lt", PyFloat_FromDouble(get_button(1004)));
     PyDict_SetItemString(dict, "rt", PyFloat_FromDouble(get_button(1005)));
     return dict;    
-    
-    // float lx = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFTX) / 32767.0f;
-    // float ly = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFTY) / 32767.0f;
-    // float rx = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_RIGHTX) / 32767.0f;
-    // float ry = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_RIGHTY) / 32767.0f;
-    // float lt = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER) / 32767.0f;
-    // float rt = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER) / 32767.0f;
-    
-    // if(emaAlpha > 0.0) {
-    //     // Apply EMA smoothing
-    //     lx = emaUpdate(axisEMA[0], lx);
-    //     ly = emaUpdate(axisEMA[1], ly);
-    //     rx = emaUpdate(axisEMA[2], rx);
-    //     ry = emaUpdate(axisEMA[3], ry);
-    //     lt = emaUpdate(axisEMA[4], lt);
-    //     rt = emaUpdate(axisEMA[5], rt);
-    // }
-
-
+  
 }
 
 static PyObject* fg_get_buttons(PyObject* self, PyObject* args) {
@@ -365,6 +368,7 @@ static PyObject* fg_quit(PyObject* self, PyObject* args) {
         SDL_CloseGamepad(gamepad);
         gamepad = nullptr;
     }
+
     SDL_Quit();
     Py_RETURN_NONE;
 }
@@ -377,6 +381,7 @@ static PyMethodDef FastGamepadMethods[] = {
     {"get_button_list",fg_get_button_list, METH_VARARGS,"Get Specific Button States"},
     {"set_smoothing", fg_set_smoothing, METH_VARARGS, "Set axis smoothing in ms"},
     {"set_debounce", fg_set_debounce, METH_VARARGS, "Set button debounce window (ms)"},
+    {"rumble", run_haptic, METH_VARARGS,"run haptic"},
     {"set_smoothing_single", fg_set_smoothing_single, METH_VARARGS, "Set axis smoothing in ms"},
     {"set_debounce_single", fg_set_debounce_single, METH_VARARGS, "Set button debounce window (ms)"},
     {"quit", fg_quit, METH_NOARGS, "Close gamepad and quit SDL"},

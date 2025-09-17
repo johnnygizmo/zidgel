@@ -1,6 +1,17 @@
 Puppetstrings
 
 
+
+-- What's New
+Version 1.0.5
+    Posebone mappings will auto-mute now when recording.
+    
+    When recording over previous keyframes with a lower keyframe rate, the non-keyframe frames will have keyframes deleted
+
+
+
+-- Instructions
+
 Plug in Controller
 - In the 3d viewport N panel, press the "Enable Controller" it should say "Controller Running"
 

@@ -25,7 +25,7 @@ class PuppetStrings_OT_PlayWithPunch(bpy.types.Operator):
         if self.action == "PLAY":
             if fastgamepad.initialized():
                 fastgamepad.set_smoothing(settings.smoothing)
-                print(fastgamepad.set_debounce(settings.debounce_time))
+                fastgamepad.set_debounce(settings.debounce_time)
 
             if screen.is_animation_playing:
                 return {'CANCELLED'}
@@ -47,7 +47,7 @@ class PuppetStrings_OT_PlayWithPunch(bpy.types.Operator):
                 else: 
                     settings.enable_record = True
                 
-                print(f"Starting playback at frame {start_frame} (punch-in {punch_in} minus preroll {preroll})")
+                #print(f"Starting playback at frame {start_frame} (punch-in {punch_in} minus preroll {preroll})")
                 scene.frame_current = start_frame
  
             bpy.ops.screen.animation_play()
@@ -58,7 +58,7 @@ class PuppetStrings_OT_PlayWithPunch(bpy.types.Operator):
             bpy.ops.screen.animation_cancel()            
             return {'FINISHED'}
         else :
-            print("Unknown action")
+            #print("Unknown action")
             return {'CANCELLED'}
 
 def register():
