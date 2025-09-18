@@ -2,6 +2,12 @@
 *Johnny Matthews*
 ## What's New
 
+**Version 1.0.7**
+* Variable Keyframe Rates per mapping. KF Rate in mapping is override for global Keyframe Interval. Set to 0 to use global setting
+* Code Cleanups
+* More Error Checking
+
+
 **Version 1.0.6**
 
 * Rumble on Punch-In or Punch-Out

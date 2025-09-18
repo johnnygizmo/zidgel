@@ -2,7 +2,7 @@ import bpy
 from . import fastgamepad
 
 class FG_PT_MappingSetsPanel(bpy.types.Panel):
-    bl_label = "Mapping Sets"
+    bl_label = "Puppet Strings"
     bl_idname = "FG_PT_mapping_sets"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
@@ -12,7 +12,14 @@ class FG_PT_MappingSetsPanel(bpy.types.Panel):
         layout = self.layout
         scene = context.scene
         settings  = scene.johnnygizmo_puppetstrings_settings
+        row = layout.row()
+        row.scale_y = 1.4
+        row.operator("puppetstrings.playback", text="Play", icon="PLAY").action = "PLAY"
+        row.operator("puppetstrings.playback", text="Stop", icon="PAUSE").action = "STOP"    
         
+        row = layout.row()
+        row.separator(factor=0.5)
+
         row = layout.row()
         if not fastgamepad.initialized():
             row.operator("fg.start_controller", text="Controller Off", icon="STRIP_COLOR_01").action = "START"
@@ -54,8 +61,7 @@ class FG_PT_MappingSetsPanel(bpy.types.Panel):
         row = layout.row()
         row.prop(context.scene.johnnygizmo_puppetstrings_settings, "auto_simplify", text="Auto-Simplify")
       
-        row = layout.row()
-        row.operator("puppetstrings.playback", text="Play", icon="PLAY").action = "PLAY"
+
 
         row = layout.row()
         row.prop(context.scene.johnnygizmo_puppetstrings_settings, "controller_fps")
@@ -191,6 +197,7 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
                             row.prop(bm, "sub_data_path", text="")
                 else:
                     row.prop(bm, "data_path", text="")
+                row.prop(bm, "keyframe_rate_override", text="KF Rate")
                 row = col.row(align=True)
                 row.separator(factor=3)
 
@@ -205,6 +212,7 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
                     box = col.box()
                     box.template_curve_mapping(bm.curve_owner,"curve")
                 row = col.row(align=True)
+            row.separator(factor=3,type='LINE')
                 # row.prop(bm,"smoothing_ms")
                 # row.prop(bm,"debounce_ms")
                 

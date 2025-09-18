@@ -51,7 +51,6 @@ def easing(value, easing_type):
     return value
 
 
-
 class FG_OT_StartController(bpy.types.Operator):
     """Start polling the gamepad"""
 
@@ -72,64 +71,6 @@ class FG_OT_StartController(bpy.types.Operator):
             ("STOP", "Stop", "Stop the gamepad controller"),
         ],) # type: ignore
 
-    
-    def playback_controls(self, context, buttons):
-        if buttons.get("start", 0) == 1:
-            if not context.screen.is_animation_playing:
-                bpy.ops.puppetstrings.playback(action="PLAY")
-            else:
-                settings = context.scene.johnnygizmo_puppetstrings_settings
-                settings.enable_record = not settings.enable_record
-                bpy.ops.ed.undo_push()
-                                                
-        if buttons.get("back", 0) == 1:
-            if context.screen.is_animation_playing:
-                bpy.ops.puppetstrings.playback(action="STOP")
-            else:
-                context.scene.frame_current = context.scene.frame_start
-
-    def modify_keyframe(self, context, mapping, ob, insert):
-        index_map = {"x": 0, "y": 1, "z": 2}
-        if mapping.mapping_type == "location":
-            if insert:
-                ob.keyframe_insert(data_path="location", index=index_map.get(mapping.axis, -1))                              
-            else:
-                ob.keyframe_delete(data_path="location", index=index_map.get(mapping.axis, -1))
-        elif mapping.mapping_type == "rotation_euler":
-            if insert:
-                ob.keyframe_insert(data_path="rotation_euler", index=index_map.get(mapping.axis, -1))
-            else:
-                ob.keyframe_delete(data_path="rotation_euler", index=index_map.get(mapping.axis, -1))
-        elif mapping.mapping_type == "scale":
-            if insert:
-                ob.keyframe_insert(data_path="scale", index=index_map.get(mapping.axis, -1))
-            else:
-                ob.keyframe_delete(data_path="scale", index=index_map.get(mapping.axis, -1))
-        elif mapping.mapping_type == "shape_key":
-            if ob.data.shape_keys:
-                key = ob.data.shape_keys.key_blocks.get(mapping.data_path)
-                if key:
-                    if insert:
-                        key.keyframe_insert(data_path="value")
-                    else:
-                        key.keyframe_delete(data_path="value")
-        elif mapping.mapping_type == "modifier":
-            if ob and ob.modifiers:
-                mod = ob.modifiers.get(mapping.data_path)
-                if mod and mapping.sub_data_path:
-                    if insert:
-                        mod.keyframe_insert(data_path=mapping.sub_data_path)
-                    else:
-                        mod.keyframe_delete(data_path=mapping.sub_data_path)
-
-    def get_active_mapping_set(self, context):
-        mapping_sets = context.scene.johnnygizmo_puppetstrings_mapping_sets
-        active_mapping_set = None
-        if len(mapping_sets) > 0:
-            return mapping_sets[context.scene.johnnygizmo_puppetstrings_active_mapping_set]
-        else:
-            return None
-
     def modal(self, context, event):
         scene = context.scene
         settings = scene.johnnygizmo_puppetstrings_settings
@@ -142,15 +83,28 @@ class FG_OT_StartController(bpy.types.Operator):
             axes = fastgamepad.get_axes()
             buttons = fastgamepad.get_buttons()
             sensors = fastgamepad.get_sensors()
-            combined = {**axes, **buttons} #, **sensors}            
 
             ob = bpy.context.active_object
-            active_mapping_set = self.get_active_mapping_set(context)
-            
-            # Handle Start/Stop
-            self.playback_controls(context, buttons)
+            mapping_sets = context.scene.johnnygizmo_puppetstrings_mapping_sets
+            active_mapping_set = None
+            if len(mapping_sets) > 0:
+                active_mapping_set = mapping_sets[context.scene.johnnygizmo_puppetstrings_active_mapping_set]
 
-            
+
+            # Handle Start/Stop
+            if buttons.get("start", 0) == 1:
+                if not context.screen.is_animation_playing:
+                    bpy.ops.puppetstrings.playback(action="PLAY")
+                else:
+                    settings.enable_record = not settings.enable_record
+                                                    
+            if buttons.get("back", 0) == 1:
+                if context.screen.is_animation_playing:
+                    bpy.ops.puppetstrings.playback(action="STOP")
+                else:
+                    scene.frame_current = scene.frame_start
+                
+            combined = {**axes, **buttons} #, **sensors}            
 
             if ob and active_mapping_set and active_mapping_set.active :
                 for mapping in active_mapping_set.button_mappings:
@@ -228,19 +182,53 @@ class FG_OT_StartController(bpy.types.Operator):
                     if ob.type=="ARMATURE" and mapping.sub_data_path != "":
                         ob = ob.pose.bones[mapping.sub_data_path]
 
-                    keyframe_rate = context.scene.johnnygizmo_puppetstrings_settings.keyframe_interval
-                    if mapping.keyframe_rate_override > 0:
-                        keyframe_rate = mapping.keyframe_rate_override
+                    #keyframe_rate = context.scene.johnnygizmo_puppetstrings_settings.keyframe_interval
+                    # if mapping.keyframe_rate_override > 0:
+                    #     keyframe_rate = mapping.keyframe_rate_override
 
 
 
-                    #keyframe_rate = context.scene.johnnygizmo_puppetstrings_settings.keyframe_interval  
-                    if context.scene.johnnygizmo_puppetstrings_settings.enable_record and context.screen.is_animation_playing and not context.screen.is_scrubbing:
-                        if (context.scene.frame_current % keyframe_rate) == 0:  # or first:
-                            self.modify_keyframe(context, mapping, ob, True)
-                        else:
-                            self.modify_keyframe(context, mapping, ob, False)
-                                    
+                    keyframe_rate = context.scene.johnnygizmo_puppetstrings_settings.keyframe_interval  
+                    if context.scene.johnnygizmo_puppetstrings_settings.enable_record and context.screen.is_animation_playing and not context.screen.is_scrubbing:                                   
+                    
+                    
+                        if(context.scene.frame_current % keyframe_rate ) == 0:# or first:
+                            index_map = {"x": 0, "y": 1, "z": 2}
+                            if mapping.mapping_type == "location":
+                                ob.keyframe_insert(data_path="location", index=index_map.get(mapping.data_path, -1))                              
+                            elif mapping.mapping_type == "rotation_euler":
+                                ob.keyframe_insert(data_path="rotation_euler", index=index_map.get(mapping.data_path, -1))
+                            elif mapping.mapping_type == "scale":
+                                ob.keyframe_insert(data_path="scale", index=index_map.get(mapping.data_path, -1))
+                            elif mapping.mapping_type == "shape_key":
+                                if ob.data.shape_keys:
+                                    key = ob.data.shape_keys.key_blocks.get(mapping.data_path)
+                                    if key:
+                                        key.keyframe_insert(data_path="value")
+                            elif mapping.mapping_type == "modifier":
+                                if ob and ob.modifiers:
+                                    mod = ob.modifiers.get(mapping.data_path)
+                                    if mod and mapping.sub_data_path:
+                                        mod.keyframe_insert(data_path=mapping.sub_data_path)
+                        else:                        
+                            index_map = {"x": 0, "y": 1, "z": 2}
+                            if mapping.mapping_type == "location":
+                                ob.keyframe_delete(data_path="location", index=index_map.get(mapping.data_path, -1))                              
+                            elif mapping.mapping_type == "rotation_euler":
+                                ob.keyframe_delete(data_path="rotation_euler", index=index_map.get(mapping.data_path, -1))
+                            elif mapping.mapping_type == "scale":
+                                ob.keyframe_delete(data_path="scale", index=index_map.get(mapping.data_path, -1))
+                            elif mapping.mapping_type == "shape_key":
+                                if ob.data.shape_keys:
+                                    key = ob.data.shape_keys.key_blocks.get(mapping.data_path)
+                                    if key:
+                                        key.keyframe_delete(data_path="value")
+                            elif mapping.mapping_type == "modifier":
+                                if ob and ob.modifiers:
+                                    mod = ob.modifiers.get(mapping.data_path)
+                                    if mod and mapping.sub_data_path:
+                                        mod.keyframe_delete(data_path=mapping.sub_data_path)                
+
         # Cancel on ESC
         if event.type == "ESC":
             settings.controller_running = False
@@ -249,26 +237,14 @@ class FG_OT_StartController(bpy.types.Operator):
             return {"CANCELLED"}
         return {"PASS_THROUGH"}
 
-
-    def ensure_handler(self,handler_list, handler_func):
-        if handler_func not in handler_list:
-            handler_list.append(handler_func)
-
-
     def execute(self, context):   
-        # if len(bpy.context.scene.johnnygizmo_puppetstrings_buttons_settings)==0:
-        #     mapping_data.create_buttons()
+        if len(bpy.context.scene.johnnygizmo_puppetstrings_buttons_settings)==0:
+            mapping_data.create_buttons()
         if self.action == "STOP":               
             #print("Stopping gamepad controller...")         
             self.cancel(context)
             return {"FINISHED"}
         else:
-
-            self.ensure_handler(bpy.app.handlers.animation_playback_pre, handlers.pre_playback_handler)
-            self.ensure_handler(bpy.app.handlers.animation_playback_post, handlers.post_playback_handler)
-            self.ensure_handler(bpy.app.handlers.frame_change_post, handlers.pre_frame_change_handler)
-        
-
             #print("Starting gamepad controller...")
             fastgamepad.init()
             fastgamepad.set_smoothing(context.scene.johnnygizmo_puppetstrings_settings.smoothing)
@@ -289,7 +265,7 @@ class FG_OT_StartController(bpy.types.Operator):
             wm.event_timer_remove(self._timer)
         context.scene.johnnygizmo_puppetstrings_settings.controller_running = False
         fastgamepad.quit()
-        return None
+        return {"CANCELLED"}
 
 
 
@@ -299,10 +275,8 @@ def register():
     bpy.app.handlers.animation_playback_pre.append(handlers.pre_playback_handler)
     bpy.app.handlers.animation_playback_post.append(handlers.post_playback_handler)
     bpy.app.handlers.frame_change_post.append(handlers.pre_frame_change_handler)
-    bpy.app.handlers.load_post.append(handlers.load_file_handler)
 
 def unregister():
-    bpy.app.handlers.load_post.remove(handlers.load_file_handler)
     bpy.app.handlers.frame_change_post.remove(handlers.pre_frame_change_handler)
     bpy.app.handlers.animation_playback_pre.remove(handlers.pre_playback_handler)
     bpy.app.handlers.animation_playback_post.remove(handlers.post_playback_handler)

@@ -50,6 +50,7 @@ BUTTON_DATA = [
     (1003,"ry", "Right Stick Y", ""),
     (1004,"lt", "Left Trigger", ""),
     (1005,"rt", "Right Trigger", ""), 
+    
     (0,"south", "South Button", "Bottom face button (e.g. Xbox A button)"),
     (1,"east", "East Button", "Bottom face button (e.g. Xbox B button)"),
     (2,"west", "West Button", "Bottom face button (e.g. Xbox X button)"),
@@ -76,6 +77,29 @@ BUTTON_DATA = [
     (23,"misc4", "Misc4 Button", "Additional button (e.g. Nintendo GameCube right trigger click)"), 
     (24,"misc5", "Misc5 Button", "Additional button"), 
     (25,"misc6", "Misc6 Button", "Additional button"), 
+
+
+    (2001,"accelx", "Accelerometer X", "X axis of accelerometer sensor"),
+    (2101,"accely", "Accelerometer Y", "Y axis of accelerometer sensor"),
+    (2201,"accelz", "Accelerometer Z", "Z axis of accelerometer sensor"),
+    (2002,"gyrox", "Gyroscope X", "X axis of gyroscope sensor"),
+    (2102,"gyroy", "Gyroscope Y", "Y axis of gyroscope sensor"),
+    (2202,"gyroz", "Gyroscope Z", "Z axis of gyroscope sensor"),
+
+    (2003,"accelx_l", "Left Accelerometer X", "X axis of left accelerometer sensor"),
+    (2103,"accely_l", "Left Accelerometer Y", "Y axis of left accelerometer sensor"),
+    (2203,"accelz_l", "Left Accelerometer Z", "Z axis of left accelerometer sensor"),
+    (2004,"gyrox_l", "Left Gyroscope X", "X axis of left gyroscope sensor"),
+    (2104,"gyroy_l", "Left Gyroscope Y", "Y axis of left gyroscope sensor"),
+    (2204,"gyroz_l", "Left Gyroscope Z", "Z axis of left gyroscope sensor"),
+
+    (2005,"accelx_r", "Right Accelerometer X", "X axis of right accelerometer sensor"),
+    (2105,"accely_r", "Right Accelerometer Y", "Y axis of right accelerometer sensor"),
+    (2205,"accelz_r", "Right Accelerometer Z", "Z axis of right accelerometer sensor"),
+    (2006,"gyrox_r", "Right Gyroscope X", "X axis of right gyroscope sensor"),
+    (2106,"gyroy_r", "Right Gyroscope Y", "Y axis of right gyroscope sensor"),
+    (2206,"gyroz_r", "Right Gyroscope Z", "Z axis of right gyroscope sensor"),
+
 ]
 def create_buttons():
     scene = bpy.context.scene
@@ -151,6 +175,10 @@ class ButtonMapping(bpy.types.PropertyGroup):
     data_path: bpy.props.StringProperty(name="Data Path") # type: ignore
     sub_data_path: bpy.props.StringProperty(name="Sub Data Path") # type: ignore
     curve_owner: bpy.props.PointerProperty(type=bpy.types.Brush)# type: ignore
+    keyframe_rate_override: bpy.props.IntProperty(name="Keyframe Rate Override", default=0, min=0, description="Override the keyframe rate for this mapping, 0 for global setting") # type: ignore
+    is_last_value_captured: bpy.props.BoolProperty(name="Last Value Captured", default=False) # type: ignore
+    last_value: bpy.props.FloatProperty(name="Last Value", default=0.0) # type: ignore
+
 
 class MappingSet(bpy.types.PropertyGroup):
     active: bpy.props.BoolProperty(name="Enabled", default=True) # type: ignore

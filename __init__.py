@@ -10,7 +10,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
-
+import bpy
 from . import settings
 from . import controller
 from . import panel
@@ -23,6 +23,7 @@ def register():
     playback.register()
     controller.register()
     panel.register()
+    
 
 def unregister(): 
     panel.unregister()
