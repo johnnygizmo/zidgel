@@ -26,7 +26,6 @@ class FG_PT_MappingSetsPanel(bpy.types.Panel):
         else:
             row.operator("fg.start_controller", text="Controller On", icon="STRIP_COLOR_04").action = "STOP"
 
-
         if context.screen.is_animation_playing:
             if settings.enable_record:
                 row.prop(settings, "enable_record",text="Recording", icon="RECORD_ON")
@@ -212,7 +211,7 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
                     box = col.box()
                     box.template_curve_mapping(bm.curve_owner,"curve")
                 row = col.row(align=True)
-            row.separator(factor=3,type='LINE')
+                row.separator(factor=3,type='LINE')
                 # row.prop(bm,"smoothing_ms")
                 # row.prop(bm,"debounce_ms")
                 
@@ -247,9 +246,19 @@ class FG_OT_AddButtonMapping(bpy.types.Operator):
         mapping = ms.button_mappings.add()
         if not mapping.curve_owner:
             brush = bpy.data.brushes.new("ButtonMappingCurve", mode='TEXTURE_PAINT')
-            brush.curve_preset = 'SMOOTH'
+            brush.curve_preset = 'LIN'
+            brush.curve.update()
             brush.curve.clip_min_x = -1
             brush.curve.clip_max_x = 1
+            brush.curve.clip_min_y = -1
+            brush.curve.clip_max_y = 1
+            brush.curve.curves[0].points[0].location = (-1, -1)
+            brush.curve.curves[0].points[1].location = (1, 1)
+            points = brush.curve.curves[0].points
+            while len(points) > 2:
+                points.remove(points[2])
+            brush.curve.update()
+
             brush.curve.reset_view()
             mapping.curve_owner = brush
         return {'FINISHED'}
