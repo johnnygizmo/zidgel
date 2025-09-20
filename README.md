@@ -1,6 +1,51 @@
 # Puppetstrings
 *Johnny Matthews*
+
+## PS5 Controller Mapping
+
+![PS5 Controller Front](img_hw_controller_front.png)
+
+* A  D Pad Up / Down / Left / Right
+* B  Back Button  (Stop Control)
+* C  Light Bar   (Red Recording / Green Playing)
+* D  Touch Pad
+* E  Player Indicator
+* F  Start Button   (Play Control)
+* G  Directional Buttons (North, South, East, West)
+* H  Right Stick
+* I  Speaker
+* J  Guide Button
+* K  Headset Jack
+* L  Microphone
+* M  Mute
+* N  Left Stick
+
+![PS5 Controller Top](img_hw_controller_top.png)
+
+* A  Right Shoulder
+* B  Right Trigger
+* C  Usb Port
+* D  Left Shoulder
+* E  Left Trigger
+
+
+
 ## What's New
+
+
+**Version 1.0.9**
+
+* Add Ability to Change LED color
+* Add Ability to Change Player # Display
+* Turn Controller LED to red when recording
+* Add Touch, Accel and Gyro Inputs
+* Add +=, -=, and *= Assignment for especially with sensor data
+* Only Retrieve Needed Data from Controller instead of all data points
+
+**Version 1.0.8**
+
+* New Mapping curves start as (-1,-1) to (1,1)
+
 
 **Version 1.0.7**
 
@@ -11,6 +56,7 @@
 
 **Version 1.0.6**
 
+* Add Ability to Rumble Controller
 * Rumble on Punch-In or Punch-Out
 * Rumble on Start Record
 

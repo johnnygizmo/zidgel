@@ -24,6 +24,7 @@ struct Input {
     int type = 0;
     string name = "";
     int index = 0;
+    int finger = 0;
     EMAState smoothing;
     DebounceState debounce;
 };
@@ -68,6 +69,30 @@ static float emaUpdate(EMAState &state, float newValue) {
     return state.value;
 }
 
+static PyObject* set_led(PyObject* self, PyObject* args) {
+    int r;
+    int g;
+    int b;
+    if (!PyArg_ParseTuple(args, "iii", &r,&g,&b)) {
+        return NULL;
+    }
+
+    SDL_SetGamepadLED(gamepad, r, g, b);
+    Py_RETURN_NONE;
+
+}
+
+static PyObject* set_player(PyObject* self, PyObject* args) {
+    int index = 0;
+    if (!PyArg_ParseTuple(args, "i", &index)) {
+        return NULL;
+    }
+
+    SDL_SetGamepadPlayerIndex(gamepad, index);
+    Py_RETURN_NONE;
+}
+
+  
 
 static int debounceButtonState(int button, int rawState) {
     Uint64 now = SDL_GetTicksNS();
@@ -87,29 +112,52 @@ static int debounceButtonState(int button, int rawState) {
 
 static float get_button(int id,int index=0){
     Input i = inputs[id]; 
-    
-    if(i.type == 1){
+    if (i.type == 0) {
+        int value = SDL_GetGamepadButton(gamepad, (SDL_GamepadButton)i.id);
+        if (i.debounce.debounceDelayNS > 0){
+            value = debounceButtonState(id,value);
+        }
+        return value;
+    } 
+    else if(i.type == 1){
         float value =  SDL_GetGamepadAxis(gamepad, (SDL_GamepadAxis)i.id) / 32767.0f;
         if(emaAlpha > 0){
             value =  emaUpdate(inputs[id].smoothing, value);
         }
         return value;
-    } else if (i.type==0) {
-        int value = SDL_GetGamepadButton(gamepad, (SDL_GamepadButton)i.id);
-        // if (i.debounce.debounceDelayNS > 0){
-        //     value = debounceButtonState(id,value);
-        // }
-        //value = emaUpdate(inputs[id].smoothing, value);
-        return value;
-    } else if (i.type==2){        
+    } 
+    else if (i.type==2){        
         float data[3];
         int value = SDL_GetGamepadSensorData(gamepad, (SDL_SensorType) i.id, data, 3);        
         if(!value){
            return 0;
         } 
-        return data[index];
-    }   
-    
+        if(i.id == SDL_SENSOR_ACCEL || i.id == SDL_SENSOR_ACCEL_L || i.id == SDL_SENSOR_ACCEL_R){
+            data[1] -= 9.80665f;// Correct for gravity on Y axis
+        }
+
+        if(emaAlpha > 0){
+            value =  emaUpdate(inputs[id].smoothing, value);
+        }
+        return data[i.index];
+    }   else if (i.type==3){                
+        bool down= false;
+        float x=0.0f, y=0.0f, pressure=0.0f;
+
+        if (SDL_GetGamepadTouchpadFinger(gamepad, 0, i.finger, &down, &x, &y, &pressure) == false) {
+            return 0.0f;
+        }
+        
+        switch(i.index){
+            case 0: return down?1.0f:0.0f;break;
+            case 1: return x*2-1;break;
+            case 2: return y*2-1;break;
+            case 3: return pressure;break;
+            default: return 0.0f;
+        }        
+    } else {
+        return 0.0f;
+    }
 }
 
 
@@ -123,6 +171,7 @@ static PyObject* fg_get_button_list(PyObject* self, PyObject* args) {
     Py_ssize_t size = PyList_Size(listObj);
     
     PyObject* dict = PyDict_New();
+    
     for (Py_ssize_t i = 0; i < size; i++) {
         PyObject* item = PyList_GetItem(listObj, i);  // borrowed reference
         if (!PyLong_Check(item)) {
@@ -130,8 +179,13 @@ static PyObject* fg_get_button_list(PyObject* self, PyObject* args) {
             return nullptr;
         }
         long value = PyLong_AsLong(item);
+        SDL_PumpEvents();
+        //cout << "Getting button for ID: " << value << endl;
+        Input input = inputs[value];
+       
         float current = get_button(value);
-        PyDict_SetItemString(dict, inputs[value].name.c_str(), PyFloat_FromDouble(current));        
+        //cout << "Button ID: " << inputs[value].id << " Name: " << inputs[value].name << " Value: " << current << endl;
+        PyDict_SetItemString(dict, input.name.c_str(), PyFloat_FromDouble(current));        
     }
     return dict;
     //Py_RETURN_NONE;
@@ -232,6 +286,23 @@ static PyObject* fg_set_debounce(PyObject* self, PyObject* args) {
 
 
 
+static PyObject* fg_get_touch(PyObject* self, PyObject* args) {
+    if (!gamepad) {
+        return PyErr_Format(PyExc_RuntimeError, "Gamepad not initialized");
+    }
+    SDL_PumpEvents();
+    PyObject* dict = PyDict_New();
+    PyDict_SetItemString(dict, "finger1down", PyBool_FromLong(get_button(3000)));
+    PyDict_SetItemString(dict, "finger1x", PyFloat_FromDouble(get_button(3100)));   
+    PyDict_SetItemString(dict, "finger1y", PyFloat_FromDouble(get_button(3200)));
+    PyDict_SetItemString(dict, "finger1pressure", PyFloat_FromDouble(get_button(3300)));
+    PyDict_SetItemString(dict, "finger2down", PyBool_FromLong(get_button(3001)));
+    PyDict_SetItemString(dict, "finger2x", PyFloat_FromDouble(get_button(3101)));   
+    PyDict_SetItemString(dict, "finger2y", PyFloat_FromDouble(get_button(3201)));
+    PyDict_SetItemString(dict, "finger2pressure", PyFloat_FromDouble(get_button(3301)));
+    return dict;      
+}
+
 // Get axes
 static PyObject* fg_get_axes(PyObject* self, PyObject* args) {
     if (!gamepad) {
@@ -245,8 +316,7 @@ static PyObject* fg_get_axes(PyObject* self, PyObject* args) {
     PyDict_SetItemString(dict, "ry", PyFloat_FromDouble(get_button(1003)));
     PyDict_SetItemString(dict, "lt", PyFloat_FromDouble(get_button(1004)));
     PyDict_SetItemString(dict, "rt", PyFloat_FromDouble(get_button(1005)));
-    return dict;    
-  
+    return dict;      
 }
 
 
@@ -290,119 +360,86 @@ static PyObject* fg_get_sensors(PyObject* self, PyObject* args) {
     }
     SDL_PumpEvents();
     PyObject* dict = PyDict_New();
-    PyDict_SetItemString(dict, "accelx", PyLong_FromLong(get_button(SDL_SENSOR_ACCEL+2000,0)));
-    PyDict_SetItemString(dict, "accely", PyLong_FromLong(get_button(SDL_SENSOR_ACCEL+2100,1)));
-    PyDict_SetItemString(dict, "accelz", PyLong_FromLong(get_button(SDL_SENSOR_ACCEL+2200,2)));
-    PyDict_SetItemString(dict, "gyrox", PyLong_FromLong(get_button(SDL_SENSOR_GYRO+2000,0)));
-    PyDict_SetItemString(dict, "gyroy", PyLong_FromLong(get_button(SDL_SENSOR_GYRO+2100,1)));
-    PyDict_SetItemString(dict, "gyroz", PyLong_FromLong(get_button(SDL_SENSOR_GYRO+2200,2)));
+    PyDict_SetItemString(dict, "accelx", PyFloat_FromDouble(get_button(SDL_SENSOR_ACCEL+2000,0)));
+    PyDict_SetItemString(dict, "accely", PyFloat_FromDouble(get_button(SDL_SENSOR_ACCEL+2100,1)));
+    PyDict_SetItemString(dict, "accelz", PyFloat_FromDouble(get_button(SDL_SENSOR_ACCEL+2200,2)));
+    PyDict_SetItemString(dict, "gyrox", PyFloat_FromDouble(get_button(SDL_SENSOR_GYRO+2000,0)));
+    PyDict_SetItemString(dict, "gyroy", PyFloat_FromDouble(get_button(SDL_SENSOR_GYRO+2100,1)));
+    PyDict_SetItemString(dict, "gyroz", PyFloat_FromDouble(get_button(SDL_SENSOR_GYRO+2200,2)));
 
-    PyDict_SetItemString(dict, "accelx_l", PyLong_FromLong(get_button(SDL_SENSOR_ACCEL_L+2000,0)));
-    PyDict_SetItemString(dict, "accely_l", PyLong_FromLong(get_button(SDL_SENSOR_ACCEL_L+2100,1)));
-    PyDict_SetItemString(dict, "accelz_l", PyLong_FromLong(get_button(SDL_SENSOR_ACCEL_L+2200,2)));
-    PyDict_SetItemString(dict, "gyrox_l", PyLong_FromLong(get_button(SDL_SENSOR_GYRO_L+2000,0)));
-    PyDict_SetItemString(dict, "gyroy_l", PyLong_FromLong(get_button(SDL_SENSOR_GYRO_L+2100,1)));
-    PyDict_SetItemString(dict, "gyroz_l", PyLong_FromLong(get_button(SDL_SENSOR_GYRO_L+2200,2)));
+    PyDict_SetItemString(dict, "accelx_l", PyFloat_FromDouble(get_button(SDL_SENSOR_ACCEL_L+2000,0)));
+    PyDict_SetItemString(dict, "accely_l", PyFloat_FromDouble(get_button(SDL_SENSOR_ACCEL_L+2100,1)));
+    PyDict_SetItemString(dict, "accelz_l", PyFloat_FromDouble(get_button(SDL_SENSOR_ACCEL_L+2200,2)));
+    PyDict_SetItemString(dict, "gyrox_l", PyFloat_FromDouble(get_button(SDL_SENSOR_GYRO_L+2000,0)));
+    PyDict_SetItemString(dict, "gyroy_l", PyFloat_FromDouble(get_button(SDL_SENSOR_GYRO_L+2100,1)));
+    PyDict_SetItemString(dict, "gyroz_l", PyFloat_FromDouble(get_button(SDL_SENSOR_GYRO_L+2200,2)));
 
-    PyDict_SetItemString(dict, "accelx_r", PyLong_FromLong(get_button(SDL_SENSOR_ACCEL_R+2000,0)));
-    PyDict_SetItemString(dict, "accely_r", PyLong_FromLong(get_button(SDL_SENSOR_ACCEL_R+2100,1)));
-    PyDict_SetItemString(dict, "accelz_r", PyLong_FromLong(get_button(SDL_SENSOR_ACCEL_R+2200,2)));
-    PyDict_SetItemString(dict, "gyrox_r", PyLong_FromLong(get_button(SDL_SENSOR_GYRO_R+2000,0)));
-    PyDict_SetItemString(dict, "gyroy_r", PyLong_FromLong(get_button(SDL_SENSOR_GYRO_R+2100,1)));
-    PyDict_SetItemString(dict, "gyroz_r", PyLong_FromLong(get_button(SDL_SENSOR_GYRO_R+2200,2)));
-
+    PyDict_SetItemString(dict, "accelx_r", PyFloat_FromDouble(get_button(SDL_SENSOR_ACCEL_R+2000,0)));
+    PyDict_SetItemString(dict, "accely_r", PyFloat_FromDouble(get_button(SDL_SENSOR_ACCEL_R+2100,1)));
+    PyDict_SetItemString(dict, "accelz_r", PyFloat_FromDouble(get_button(SDL_SENSOR_ACCEL_R+2200,2)));
+    PyDict_SetItemString(dict, "gyrox_r", PyFloat_FromDouble(get_button(SDL_SENSOR_GYRO_R+2000,0)));
+    PyDict_SetItemString(dict, "gyroy_r", PyFloat_FromDouble(get_button(SDL_SENSOR_GYRO_R+2100,1)));
+    PyDict_SetItemString(dict, "gyroz_r", PyFloat_FromDouble(get_button(SDL_SENSOR_GYRO_R+2200,2)));
 
     return dict;
 }
 
 
-
-
-
-
-
-
 static PyObject* fg_init(PyObject* self, PyObject* args) {
-   if (SDL_Init(SDL_INIT_GAMEPAD | SDL_INIT_JOYSTICK | SDL_INIT_HAPTIC | SDL_INIT_SENSOR ) == 0) {
-        return PyErr_Format(PyExc_RuntimeError, "SDL_Init failed: %s", SDL_GetError());
+    if (SDL_Init(SDL_INIT_GAMEPAD) == 0) {
+        std::cerr << "SDL initialization failed: " << SDL_GetError() << std::endl;
+        return PyErr_Format(PyExc_RuntimeError, "SDL initialization failed: %s", SDL_GetError());
     }
 
     int num_gamepads = 0;
     SDL_JoystickID* gamepad_ids = SDL_GetGamepads(&num_gamepads);
-
-    if (num_gamepads < 1) {
-        if (!virtual_joystick) {
-        SDL_VirtualJoystickDesc desc;
-        SDL_INIT_INTERFACE(&desc);     // zero/init the interface struct. (use SDL_INIT_INTERFACE macro)
-        desc.type = SDL_JOYSTICK_TYPE_GAMEPAD;
-        desc.naxes = 6;    // Lx, Ly, Rx, Ry, LT, RT
-        desc.nbuttons = 11; // A,B,X,Y,LB,RB,Back,Start,Guide,LS,RS (adjust as you like)
-        desc.nhats = 1;    // d-pad as a POV hat
-        desc.name = "Virtual Xbox 360 (SDL3)";
-
-        // Make SDL know which buttons/axes are valid for a gamepad layout.
-        // Use SDL_GAMEPAD_AXIS_* and SDL_GAMEPAD_BUTTON_* enum values as bits.
-        desc.axis_mask = (1u << SDL_GAMEPAD_AXIS_LEFTX) |
-                        (1u << SDL_GAMEPAD_AXIS_LEFTY) |
-                        (1u << SDL_GAMEPAD_AXIS_RIGHTX) |
-                        (1u << SDL_GAMEPAD_AXIS_RIGHTY) |
-                        (1u << SDL_GAMEPAD_AXIS_LEFT_TRIGGER) |
-                        (1u << SDL_GAMEPAD_AXIS_RIGHT_TRIGGER);
-
-        desc.button_mask = (1u << SDL_GAMEPAD_BUTTON_SOUTH) |  // A
-                        (1u << SDL_GAMEPAD_BUTTON_EAST)  |  // B
-                        (1u << SDL_GAMEPAD_BUTTON_WEST)  |  // X
-                        (1u << SDL_GAMEPAD_BUTTON_NORTH) |  // Y
-                        (1u << SDL_GAMEPAD_BUTTON_LEFT_SHOULDER) |
-                        (1u << SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER) |
-                        (1u << SDL_GAMEPAD_BUTTON_BACK) |
-                        (1u << SDL_GAMEPAD_BUTTON_START) |
-                        (1u << SDL_GAMEPAD_BUTTON_GUIDE) |
-                        (1u << SDL_GAMEPAD_BUTTON_LEFT_STICK) |
-                        (1u << SDL_GAMEPAD_BUTTON_RIGHT_STICK);
-
-        SDL_JoystickID virtual_id = SDL_AttachVirtualJoystick(&desc);
-
-        if (virtual_id == 0) {
-            SDL_Log("Couldn't attach virtual device: %s\n", SDL_GetError());
-            // Optionally, you might want to return an error here if a virtual joystick is critical
-        } else {
-            virtual_joystick = SDL_OpenJoystick(virtual_id);
-            if (!virtual_joystick) {
-                SDL_Log("Couldn't open virtual device: %s\n", SDL_GetError());
-                // Optionally, return an error here
-            } else {
-                SDL_Log("Virtual joystick attached with ID: %d\n", virtual_id);
-            }
-        }
-
-        gamepad = SDL_OpenGamepad(virtual_id);
-    }
-        
-    if (gamepad_ids) {
-        SDL_free(gamepad_ids);
-        gamepad_ids = NULL; 
-    }
-
-   if (!virtual_joystick) {
+    
+    if (num_gamepads == 0) {
+        std::cerr << "No gamepads connected!" << std::endl;        
         SDL_Quit();
-        return PyErr_Format(PyExc_RuntimeError, "Failed to create or open virtual joystick");
+        return PyErr_Format(PyExc_RuntimeError, "No gamepads connected!")  ;
     }
-    } else {
-        gamepad = SDL_OpenGamepad(gamepad_ids[0]);
-        if (!gamepad) {
-            SDL_Quit();
-            return PyErr_Format(PyExc_RuntimeError, "Failed to open gamepad: %s", SDL_GetError());
-        }
-        
-        if (gamepad_ids) {
-            SDL_free(gamepad_ids);
-            gamepad_ids = NULL;
-        }
-    }
-    Py_RETURN_NONE;
-}
 
+    //std::cout << "Found " << num_gamepads << " gamepad(s)" << std::endl;
+    gamepad = SDL_OpenGamepad(gamepad_ids[0]);
+    if (!gamepad) {
+        std::cerr << "Failed to open gamepad: " << SDL_GetError() << std::endl;
+        SDL_free(gamepad_ids);
+        SDL_Quit();
+        return PyErr_Format(PyExc_RuntimeError, "Failed to open gamepad: %s", SDL_GetError());
+    }
+
+    // Get gamepad name
+    const char* name = SDL_GetGamepadName(gamepad);
+    //std::cout << "Opened gamepad: " << (name ? name : "Unknown") << std::endl;
+
+    // Check if the gamepad has a sensor (accelerometer)
+    if (!SDL_GamepadHasSensor(gamepad, SDL_SENSOR_ACCEL)) {
+        std::cerr << "Gamepad does not have an accelerometer!" << std::endl;
+        SDL_CloseGamepad(gamepad);
+        SDL_free(gamepad_ids);
+        SDL_Quit();
+        return PyErr_Format(PyExc_RuntimeError, "Gamepad does not have an accelerometer!");
+    }
+
+    if (SDL_SetGamepadSensorEnabled(gamepad, SDL_SENSOR_ACCEL, true) == 0) {
+        std::cerr << "Failed to enable accelerometer: " << SDL_GetError() << std::endl;
+        SDL_CloseGamepad(gamepad);
+        SDL_free(gamepad_ids);
+        SDL_Quit();
+        return PyErr_Format(PyExc_RuntimeError, "Failed to enable accelerometer: %s", SDL_GetError());
+    }    
+
+    if (SDL_SetGamepadSensorEnabled(gamepad, SDL_SENSOR_GYRO, true) == 0) {
+        std::cerr << "Failed to enable gyroscope: " << SDL_GetError() << std::endl;
+        SDL_CloseGamepad(gamepad);
+        SDL_free(gamepad_ids);
+        SDL_Quit();
+        return PyErr_Format(PyExc_RuntimeError, "Failed to enable gyroscope: %s", SDL_GetError());
+    }    
+
+    Py_RETURN_NONE;    
+}
 
 static PyObject* fg_quit(PyObject* self, PyObject* args) {
     if (gamepad) {
@@ -421,9 +458,11 @@ static PyMethodDef FastGamepadMethods[] = {
     {"get_buttons", fg_get_buttons, METH_NOARGS, "Get A/B/X/Y button states"},
     {"get_button_list",fg_get_button_list, METH_VARARGS,"Get Specific Button States"},
     {"get_sensors", fg_get_sensors, METH_NOARGS, "Get sensor data"},
+    {"get_touch", fg_get_touch, METH_NOARGS, "Get touchpad data"},
     {"set_smoothing", fg_set_smoothing, METH_VARARGS, "Set axis smoothing in ms"},
 
-
+    {"set_led", set_led, METH_VARARGS,"set led"},     
+    {"set_player", set_player, METH_VARARGS,"set player index"},
     {"set_debounce", fg_set_debounce, METH_VARARGS, "Set button debounce window (ms)"},
     {"rumble", run_haptic, METH_VARARGS,"run haptic"},
     {"set_smoothing_single", fg_set_smoothing_single, METH_VARARGS, "Set axis smoothing in ms"},
@@ -483,19 +522,15 @@ PyMODINIT_FUNC PyInit_fastgamepad(void) {
     inputs[SDL_SENSOR_GYRO+2100] = {SDL_SENSOR_GYRO,2,"gyroy",1};
     inputs[SDL_SENSOR_GYRO+2200] = {SDL_SENSOR_GYRO,2,"gyroz",2};
 
-    inputs[SDL_SENSOR_ACCEL_L+2000] = {SDL_SENSOR_ACCEL_L,2,"accelx_l",0};
-    inputs[SDL_SENSOR_ACCEL_L+2100] = {SDL_SENSOR_ACCEL_L,2,"accely_l",1};
-    inputs[SDL_SENSOR_ACCEL_L+2200] = {SDL_SENSOR_ACCEL_L,2,"accelz_l",2};
-    inputs[SDL_SENSOR_GYRO_L+2000] = {SDL_SENSOR_GYRO_L,2,"gyrox_l",0};
-    inputs[SDL_SENSOR_GYRO_L+2100] = {SDL_SENSOR_GYRO_L,2,"gyroy_l",1};
-    inputs[SDL_SENSOR_GYRO_L+2200] = {SDL_SENSOR_GYRO_L,2,"gyroz_l",2};
+    inputs[3000] = {3000,3,"finger1down",0,0};
+    inputs[3100] = {3100,3,"finger1x",1,0};
+    inputs[3200] = {3200,3,"finger1y",2,0};
+    //inputs[3300] = {3300,3,"finger1pressure",3,0};
 
-    inputs[SDL_SENSOR_ACCEL_R+2000] = {SDL_SENSOR_ACCEL_R,2,"accelx_r",0};
-    inputs[SDL_SENSOR_ACCEL_R+2100] = {SDL_SENSOR_ACCEL_R,2,"accely_r",1};
-    inputs[SDL_SENSOR_ACCEL_R+2200] = {SDL_SENSOR_ACCEL_R,2,"accelz_r",2};
-    inputs[SDL_SENSOR_GYRO_R+2000] = {SDL_SENSOR_GYRO_R,2,"gyrox_r",0};
-    inputs[SDL_SENSOR_GYRO_R+2100] = {SDL_SENSOR_GYRO_R,2,"gyroy_r",1};
-    inputs[SDL_SENSOR_GYRO_R+2200] = {SDL_SENSOR_GYRO_R,2,"gyroz_r",2};
+    inputs[3001] = {3001,3,"finger2down",0,1};
+    inputs[3101] = {3101,3,"finger2x",1,1};
+    inputs[3201] = {3201,3,"finger2y",2,1};
+    //inputs[3301] = {3301,3,"finger2pressure",3,1};
 
     return PyModule_Create(&fastgamepadmodule);
 }

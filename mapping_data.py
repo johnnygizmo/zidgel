@@ -25,6 +25,13 @@ MAPPING_OPS = [
     ("expression", "AssignmentExpression", "Use a Python expression to modify the button/axis value"),
 ]
 
+ASSIGNMENT_TYPES = [
+    ("equal", "=", "Set value"),
+    ("add", "+=", "Add to value"),
+    ("subtract", "-=", "Subtract from value"),
+    ("multiply", "*=", "Multiply value"),
+]
+
 MAPPING_TYPES = [
     ("location", "Location", "","OBJECT_ORIGIN",1),
     ("rotation_euler", "Rotation Euler", "","DRIVER_ROTATIONAL_DIFFERENCE",2),
@@ -72,11 +79,11 @@ BUTTON_DATA = [
     (19,"lp2", "Left Paddle 2", "Lower or secondary paddle, under your left hand (e.g. Xbox Elite paddle P4, DualSense Edge left Fn button, Left Joy-Con SR button) "),
     (20,"touchpad", "Touch Button", ""), 
     (15,"misc1", "Misc1 Button", "Additional button (e.g. Xbox Series X share button, PS5 microphone button, Nintendo Switch Pro capture button, Amazon Luna microphone button, Google Stadia capture button)"),
-    (21,"misc2", "Misc2 Button", "Additional button"), 
-    (22,"misc3", "Misc3 Button", "Additional button (e.g. Nintendo GameCube left trigger click)"), 
-    (23,"misc4", "Misc4 Button", "Additional button (e.g. Nintendo GameCube right trigger click)"), 
-    (24,"misc5", "Misc5 Button", "Additional button"), 
-    (25,"misc6", "Misc6 Button", "Additional button"), 
+    # (21,"misc2", "Misc2 Button", "Additional button"), 
+    # (22,"misc3", "Misc3 Button", "Additional button (e.g. Nintendo GameCube left trigger click)"), 
+    # (23,"misc4", "Misc4 Button", "Additional button (e.g. Nintendo GameCube right trigger click)"), 
+    # (24,"misc5", "Misc5 Button", "Additional button"), 
+    # (25,"misc6", "Misc6 Button", "Additional button"), 
 
 
     (2001,"accelx", "Accelerometer X", "X axis of accelerometer sensor"),
@@ -86,19 +93,31 @@ BUTTON_DATA = [
     (2102,"gyroy", "Gyroscope Y", "Y axis of gyroscope sensor"),
     (2202,"gyroz", "Gyroscope Z", "Z axis of gyroscope sensor"),
 
-    (2003,"accelx_l", "Left Accelerometer X", "X axis of left accelerometer sensor"),
-    (2103,"accely_l", "Left Accelerometer Y", "Y axis of left accelerometer sensor"),
-    (2203,"accelz_l", "Left Accelerometer Z", "Z axis of left accelerometer sensor"),
-    (2004,"gyrox_l", "Left Gyroscope X", "X axis of left gyroscope sensor"),
-    (2104,"gyroy_l", "Left Gyroscope Y", "Y axis of left gyroscope sensor"),
-    (2204,"gyroz_l", "Left Gyroscope Z", "Z axis of left gyroscope sensor"),
 
-    (2005,"accelx_r", "Right Accelerometer X", "X axis of right accelerometer sensor"),
-    (2105,"accely_r", "Right Accelerometer Y", "Y axis of right accelerometer sensor"),
-    (2205,"accelz_r", "Right Accelerometer Z", "Z axis of right accelerometer sensor"),
-    (2006,"gyrox_r", "Right Gyroscope X", "X axis of right gyroscope sensor"),
-    (2106,"gyroy_r", "Right Gyroscope Y", "Y axis of right gyroscope sensor"),
-    (2206,"gyroz_r", "Right Gyroscope Z", "Z axis of right gyroscope sensor"),
+    (3000,"finger1down", "Touch Finger 1 Down", "Is finger 1 touching the touchpad"),
+    (3100,"finger1x", "Touch Finger 1 X", "X position of finger 1 on the touchpad"),
+    (3200,"finger1y", "Touch Finger 1 Y", "Y position of finger 1 on the touchpad"),
+    #(3300,"finger1pressure", "Finger 1 Pressure", "Pressure of finger 1 on the touchpad"),
+
+    (3001,"finger2down", "Touch Finger 2 Down", "Is finger 2 touching the touchpad"),
+    (3101,"finger2x", "Touch Finger 2 X", "X position of finger 2 on the touchpad"),
+    (3201,"finger2y", "Touch Finger 2 Y", "Y position of finger 2 on the touchpad"),
+    #(3301,"finger2pressure", "Finger 2 Pressure", "Pressure of finger 2 on the touchpad"),
+
+
+    # (2003,"accelx_l", "Left Accelerometer X", "X axis of left accelerometer sensor"),
+    # (2103,"accely_l", "Left Accelerometer Y", "Y axis of left accelerometer sensor"),
+    # (2203,"accelz_l", "Left Accelerometer Z", "Z axis of left accelerometer sensor"),
+    # (2004,"gyrox_l", "Left Gyroscope X", "X axis of left gyroscope sensor"),
+    # (2104,"gyroy_l", "Left Gyroscope Y", "Y axis of left gyroscope sensor"),
+    # (2204,"gyroz_l", "Left Gyroscope Z", "Z axis of left gyroscope sensor"),
+
+    # (2005,"accelx_r", "Right Accelerometer X", "X axis of right accelerometer sensor"),
+    # (2105,"accely_r", "Right Accelerometer Y", "Y axis of right accelerometer sensor"),
+    # (2205,"accelz_r", "Right Accelerometer Z", "Z axis of right accelerometer sensor"),
+    # (2006,"gyrox_r", "Right Gyroscope X", "X axis of right gyroscope sensor"),
+    # (2106,"gyroy_r", "Right Gyroscope Y", "Y axis of right gyroscope sensor"),
+    # (2206,"gyroz_r", "Right Gyroscope Z", "Z axis of right gyroscope sensor"),
 
 ]
 def create_buttons():
@@ -117,7 +136,8 @@ def create_buttons():
 def get_buttons(a,aa):
     output = []
     for b in BUTTON_DATA:
-        output.append((b[1],b[2],b[3]))
+        if b[0] not in (4,5,6):
+            output.append((b[1],b[2],b[3]))
     return output
 
 
@@ -163,6 +183,13 @@ class ButtonMapping(bpy.types.PropertyGroup):
         default="linear"
     ) # type: ignore
     scale: bpy.props.FloatProperty(name="Scale", default=1.0) # type: ignore
+
+    assignment: bpy.props.EnumProperty(
+        name="Assignment Type",
+        items=ASSIGNMENT_TYPES,
+        description="Type of assignment to perform",
+        default="equal"
+    ) # type: ignore
 
     axis: bpy.props.EnumProperty(
         name="Axis",

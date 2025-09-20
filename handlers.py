@@ -3,10 +3,15 @@ from . import fastgamepad
 from . import rumble
 
 def post_playback_handler(scene,depsgrap):
+    if len(scene.johnnygizmo_puppetstrings_mapping_sets) == 0:
+        return
+    if len(scene.johnnygizmo_puppetstrings_mapping_sets[scene.johnnygizmo_puppetstrings_active_mapping_set].button_mappings) == 0:
+        return
     settings = scene.johnnygizmo_puppetstrings_settings 
     mapping_sets = scene.johnnygizmo_puppetstrings_mapping_sets
     active_mapping_set = mapping_sets[scene.johnnygizmo_puppetstrings_active_mapping_set]
 
+    fastgamepad.set_led(0,0,0)
     if active_mapping_set.active == True:
         for mapping in active_mapping_set.button_mappings:
             if not mapping.enabled or mapping.object == "":
@@ -21,6 +26,10 @@ def post_playback_handler(scene,depsgrap):
         scene.render.use_simplify = False 
 
 def pre_playback_handler(scene,depsgrap):
+    if len(scene.johnnygizmo_puppetstrings_mapping_sets) == 0:
+        return
+    if len(scene.johnnygizmo_puppetstrings_mapping_sets[scene.johnnygizmo_puppetstrings_active_mapping_set].button_mappings) == 0:
+        return
     for m in scene.johnnygizmo_puppetstrings_mapping_sets[scene.johnnygizmo_puppetstrings_active_mapping_set].button_mappings:
         m.is_last_value_captured = False
     settings = scene.johnnygizmo_puppetstrings_settings 
@@ -45,7 +54,10 @@ def pre_playback_handler(scene,depsgrap):
                     curve.mute = False 
     if settings.enable_record:
         rumble.rumble_async(0xFFFF,0xFFFF,250)
+        fastgamepad.set_led(255,0,0)
         bpy.ops.ed.undo_push()
+    else:
+        fastgamepad.set_led(0,255,0)
 
 def getCurve(mapping,settings):
     axis_map = {
@@ -113,12 +125,12 @@ def pre_frame_change_handler(scene,depsgrap):
         settings.enable_record = True 
         bpy.ops.ed.undo_push()
         rumble.rumble_async(0xFFFF,0xFFFF,250)
-        #print("Starting recording")
+        fastgamepad.set_led(255,0,0)
         
     if scene.frame_current == punch_out_frame and settings.enable_record and settings.use_punch:
         settings.enable_record = False
         rumble.rumble_async(0xFFFF,0xFFFF,250)
-        #print("Stopping recording")
+        fastgamepad.set_led(0,255,0)
 
     if settings.use_punch and scene.frame_current > punch_out_frame + pre_roll:
         bpy.ops.puppetstrings.playback(action="STOP")

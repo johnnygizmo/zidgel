@@ -75,12 +75,10 @@ class FG_OT_StartController(bpy.types.Operator):
     
     def playback_controls(self, context, buttons):
         if buttons.get("start", 0) == 1:
-            if not context.screen.is_animation_playing:
+            if not context.screen.is_animation_playing:                
                 bpy.ops.puppetstrings.playback(action="PLAY")
-            else:
-                settings = context.scene.johnnygizmo_puppetstrings_settings
-                settings.enable_record = not settings.enable_record
-                bpy.ops.ed.undo_push()
+            
+               
                                                 
         if buttons.get("back", 0) == 1:
             if context.screen.is_animation_playing:
@@ -139,18 +137,32 @@ class FG_OT_StartController(bpy.types.Operator):
             return {"CANCELLED"}
 
         if event.type == "TIMER":
-            axes = fastgamepad.get_axes()
-            buttons = fastgamepad.get_buttons()
-            sensors = fastgamepad.get_sensors()
-            combined = {**axes, **buttons} #, **sensors}            
+
+            buttons_list = [4,5,6]
+            m = scene.johnnygizmo_puppetstrings_mapping_sets[scene.johnnygizmo_puppetstrings_active_mapping_set]
+            for mapping in m.button_mappings:
+                #print("Mapping: " + mapping.button)
+                bmd = next((b for b in mapping_data.BUTTON_DATA if b[1] == mapping.button), None)
+                ##print(bmd[0])
+
+                if bmd[0] not in buttons_list:                    
+                    buttons_list.append(bmd[0])
+
+            #print(buttons_list)
+            #print(fastgamepad.get_button_list(buttons_list))
+            combined = fastgamepad.get_button_list(buttons_list)
+
+            # axes = fastgamepad.get_axes()
+            # buttons = fastgamepad.get_buttons()
+            # sensors = fastgamepad.get_sensors()
+            # touch = fastgamepad.get_touch()
+            # combined = {**axes, **buttons, **sensors, **touch}
 
             ob = bpy.context.active_object
             active_mapping_set = self.get_active_mapping_set(context)
             
             # Handle Start/Stop
-            self.playback_controls(context, buttons)
-
-            
+            self.playback_controls(context, combined)
 
             if ob and active_mapping_set and active_mapping_set.active :
                 for mapping in active_mapping_set.button_mappings:
@@ -162,13 +174,28 @@ class FG_OT_StartController(bpy.types.Operator):
                     value = raw_value
 
                     value = easing(value, mapping.input_easing)  
+                    
                     ob = bpy.data.objects.get(mapping.object)
+                    if ob.type == 'ARMATURE' and mapping.mapping_type == "shape_key":
+                        continue
 
-                    command = " = " + str(value)
+                    scale = 1
+                    assign = " = "
+                    if mapping.assignment == "add":
+                        assign = " += "
+                        scale = 1 / scene.render.fps
+                    elif mapping.assignment == "subtract":
+                        assign = " -= "
+                        scale = 1 / scene.render.fps
+                    elif mapping.assignment == "multiply":
+                        assign = " *= "
+                        scale = 1 / scene.render.fps
+
+                    command = assign + str(value*scale)
                     pre_command = ""
                     if mapping.operation == "curve":
                         mapped = mapping.curve_owner.curve.evaluate(mapping.curve_owner.curve.curves[0],value)
-                        command = " = " + str(round(mapped,6))
+                        command = assign + str(round(mapped*scale,6))
                     if mapping.operation == "expression":
                         command = mapping.expression
                     elif mapping.operation == "invertb":
@@ -177,7 +204,7 @@ class FG_OT_StartController(bpy.types.Operator):
                         command = " = " + str(-value)
 
                     if mapping.mapping_type == "location":
-                        if ob.type != 'ARMATURE':
+                        if ob.type != 'ARMATURE' or mapping.sub_data_path == "":
                             command = "ob.location." + mapping.axis + command
                         else:                            
                             command = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].location." + mapping.axis + command
@@ -244,7 +271,6 @@ class FG_OT_StartController(bpy.types.Operator):
         # Cancel on ESC
         if event.type == "ESC":
             settings.controller_running = False
-            #print("Cancelling gamepad controller...")
             self.cancel(context)
             return {"CANCELLED"}
         return {"PASS_THROUGH"}
@@ -258,8 +284,7 @@ class FG_OT_StartController(bpy.types.Operator):
     def execute(self, context):   
         # if len(bpy.context.scene.johnnygizmo_puppetstrings_buttons_settings)==0:
         #     mapping_data.create_buttons()
-        if self.action == "STOP":               
-            #print("Stopping gamepad controller...")         
+        if self.action == "STOP":                     
             self.cancel(context)
             return {"FINISHED"}
         else:
@@ -268,8 +293,6 @@ class FG_OT_StartController(bpy.types.Operator):
             self.ensure_handler(bpy.app.handlers.animation_playback_post, handlers.post_playback_handler)
             self.ensure_handler(bpy.app.handlers.frame_change_post, handlers.pre_frame_change_handler)
         
-
-            #print("Starting gamepad controller...")
             fastgamepad.init()
             fastgamepad.set_smoothing(context.scene.johnnygizmo_puppetstrings_settings.smoothing)
             wm = context.window_manager

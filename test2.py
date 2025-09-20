@@ -5,6 +5,9 @@ import math
 from pathlib import Path
 import padtest
 padtest.init()
-b = padtest.get_button(0,1)
-print (b)
+
+padtest.get_info()
+# print(padtest.get_button(2,1))
+# print(padtest.get_button(2,2))
+
 padtest.quit()
