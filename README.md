@@ -1,37 +1,7 @@
 # Puppetstrings
 *Johnny Matthews*
 
-## PS5 Controller Mapping
-
-![PS5 Controller Front](img_hw_controller_front.png)
-
-* A  D Pad Up / Down / Left / Right
-* B  Back Button  (Stop Control)
-* C  Light Bar   (Red Recording / Green Playing)
-* D  Touch Pad
-* E  Player Indicator
-* F  Start Button   (Play Control)
-* G  Directional Buttons (North, South, East, West)
-* H  Right Stick
-* I  Speaker
-* J  Guide Button
-* K  Headset Jack
-* L  Microphone
-* M  Mute
-* N  Left Stick
-
-![PS5 Controller Top](img_hw_controller_top.png)
-
-* A  Right Shoulder
-* B  Right Trigger
-* C  Usb Port
-* D  Left Shoulder
-* E  Left Trigger
-
-
-
 ## What's New
-
 
 **Version 1.0.9**
 
@@ -66,6 +36,41 @@
 * When recording over previous keyframes with a lower keyframe rate, the non-keyframe frames will have keyframes deleted.
 
 ---
+
+
+
+
+
+## PS5 Controller Mapping
+
+![PS5 Controller Front](img_hw_controller_front.png)
+
+* A  D Pad Up / Down / Left / Right
+* B  Back Button  (Stop Control)
+* C  Light Bar   (Red Recording / Green Playing)
+* D  Touch Pad
+* E  Player Indicator
+* F  Start Button   (Play Control)
+* G  Directional Buttons (North, South, East, West)
+* H  Right Stick
+* I  Speaker
+* J  Guide Button
+* K  Headset Jack
+* L  Microphone
+* M  Mute (Misc 1 Button)
+* N  Left Stick
+
+![PS5 Controller Top](img_hw_controller_top.png)
+
+* A  Right Shoulder
+* B  Right Trigger
+* C  Usb Port
+* D  Left Shoulder
+* E  Left Trigger
+
+---
+
+
 
 ## Instructions
 
