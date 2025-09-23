@@ -141,7 +141,24 @@ def get_buttons(a,aa):
     return output
 
 
-        
+def set_active_object(mapping, context):
+    if mapping.object_target is None:
+        mapping.sub_data_path = ""
+        return False
+    for o in bpy.context.selected_objects:
+        o.select_set(False)
+    mapping.object_target.select_set(True)
+    bpy.context.view_layer.objects.active = mapping.object_target
+    mapping.sub_data_path = ""
+    if mapping.object_target.type == 'ARMATURE':
+        if bpy.context.object.mode != 'POSE':
+            bpy.ops.object.mode_set(mode='POSE')    
+    return True
+
+def post_bone_pick(mapping, context):
+    if mapping.object_target.type == 'ARMATURE' and mapping.sub_data_path != "":
+        if bpy.context.object.mode != 'OBJECT':
+            bpy.ops.object.mode_set(mode='OBJECT')     
 
 class ButtonMapping(bpy.types.PropertyGroup):
     show_panel: bpy.props.BoolProperty(
@@ -156,8 +173,17 @@ class ButtonMapping(bpy.types.PropertyGroup):
         default="object"
     ) # type: ignore
 
+
+
     enabled: bpy.props.BoolProperty(name="Enabled", default=True) # type: ignore
     object: bpy.props.StringProperty(name="Object") # type: ignore
+    object_target : bpy.props.PointerProperty(
+        name="Selected Object",
+        description="Selected Object",
+        type=bpy.types.Object,
+        update = set_active_object
+
+    ) # type: ignore
     
     operation:  bpy.props.EnumProperty(
         name="Opeation",

@@ -148,17 +148,20 @@ class FG_OT_StartController(bpy.types.Operator):
 
             combined = fastgamepad.get_button_list(buttons_list)
 
-            ob = bpy.context.active_object
+            #ob = bpy.context.active_object
             active_mapping_set = self.get_active_mapping_set(context)
             
             # Handle Start/Stop
             self.playback_controls(context, combined)
 
-            if ob and active_mapping_set and active_mapping_set.active :
+            if active_mapping_set and active_mapping_set.active :
                 for mapping in active_mapping_set.button_mappings:
-                    if not mapping.enabled or mapping.object == "":
+                    # if not mapping.enabled or mapping.object == "":
+                    #     continue
+                    if not mapping.enabled or mapping.object_target == "":
                         continue
-                    
+
+
                     op = mapping.operation
                     raw_value = combined.get(mapping.button)
 
@@ -172,7 +175,8 @@ class FG_OT_StartController(bpy.types.Operator):
 
                     value = easing(value, mapping.input_easing)  
                     
-                    ob = bpy.data.objects.get(mapping.object)
+                    #ob = bpy.data.objects.get(mapping.object)
+                    ob = mapping.object_target
                     if ob.type == 'ARMATURE' and mapping.mapping_type == "shape_key":
                         continue
 

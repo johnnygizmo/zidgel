@@ -164,18 +164,17 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
             #layout.prop(bm, "invert", icon="ARROW_LEFTRIGHT", text="")
 
             #layout.prop(bm, "scale", text="")
-            row.prop_search(bm, "object", bpy.data, "objects", text="")
+            row.prop_search(bm, "object_target", bpy.data, "objects", text="")
             
-            ob = bpy.data.objects.get(bm.object)
+            #ob = bpy.data.objects.get(bm.object)
+            ob = bm.object_target
             if ob and ob.type == "ARMATURE":
                 row.prop_search(
-                bm,
-                "sub_data_path",
-                ob.pose,
-                "bones",
+                bm,"sub_data_path",
+                ob.data, "bones",
                 text=""
-            )
-            
+                )
+                            
             if bm.show_panel:
 
                 row = col.row(align=True)
@@ -216,14 +215,16 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
                 if bm.mapping_type in ("location", "rotation_euler", "scale")  :
                     row.prop(bm, "axis", text="")
                 elif bm.mapping_type == "shape_key":
-                    ob = bpy.data.objects.get(bm.object)
+                    #ob = bpy.data.objects.get(bm.object)
+                    ob = bm.object_target
                     #layout.template_path_builder(bm, "data_path", root=ob, text="")
                     if ob and ob.type == 'MESH' and ob.data.shape_keys:
                         row.prop_search(bm, "data_path", text="", search_data=ob.data.shape_keys, search_property="key_blocks")
                     else:
                         row.prop(bm, "data_path", text="")
                 elif bm.mapping_type == "modifier":
-                    ob = bpy.data.objects.get(bm.object)
+                    #ob = bpy.data.objects.get(bm.object)
+                    ob = bm.object_target
                     if ob:
                         row.prop_search(bm, "data_path", text="", search_data=ob, search_property="modifiers")
                         mod = ob.modifiers.get(bm.data_path)
