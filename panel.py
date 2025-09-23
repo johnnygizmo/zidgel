@@ -24,7 +24,11 @@ class FG_PT_MappingSetsPanel(bpy.types.Panel):
         if not fastgamepad.initialized():
             row.operator("fg.start_controller", text="Controller Off", icon="STRIP_COLOR_01").action = "START"
         else:
-            row.operator("fg.start_controller", text="Controller On", icon="STRIP_COLOR_04").action = "STOP"
+            name = fastgamepad.get_name()
+            if name and name != "":
+                row.operator("fg.start_controller", text=name, icon="STRIP_COLOR_04").action = "STOP"
+            else:
+                row.operator("fg.start_controller", text="Controller On", icon="STRIP_COLOR_04").action = "STOP"
 
         if context.screen.is_animation_playing:
             if settings.enable_record:
@@ -173,7 +177,38 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
             )
             
             if bm.show_panel:
-            
+
+                row = col.row(align=True)
+                row.separator(factor=3)
+                row.label(text="Input Adjustments:")
+                row.prop(bm, "scaling", text="Scaling")
+                row.prop(bm, "rounding", text="Rounding")
+
+                row = col.row(align=True)
+                row.separator(factor=3)
+                row.prop(bm, "use_input_clipping", text="Input Clipping")
+                box = row.box()
+                box.enabled = bm.use_input_clipping
+                row_in_box = box.row(align=True)
+                row_in_box.prop(bm, "input_clip_min", text="Min")
+                row_in_box.prop(bm, "input_clip_max", text="Max")
+
+                row = col.row(align=True)
+                row.separator(factor=3)
+                row.prop(bm, "use_clipping", text="Result Clipping")
+                box = row.box()
+                box.enabled = bm.use_clipping
+                row_in_box = box.row(align=True)
+                row_in_box.prop(bm, "clip_min", text="Min")
+                row_in_box.prop(bm, "clip_max", text="Max")
+
+
+
+
+
+
+
+
                 row = col.row(align=True)
                 row.separator(factor=3)
                 row.prop(bm, "mapping_type", text="")
@@ -197,6 +232,8 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
                 else:
                     row.prop(bm, "data_path", text="")
                 row.prop(bm, "keyframe_rate_override", text="KF Rate")
+
+
                 row = col.row(align=True)
                 row.separator(factor=3)
                 if(bm.operation == "curve" or bm.operation == "value"):
@@ -207,8 +244,16 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
                 if bm.operation == "expression":
                     row.prop(bm, "expression", text="Expression", emboss=True)
                 
+
+
+                # row.prop(bm, "use_clipping")
+                # if bm.use_clipping:
+                #     row.prop(bm, "clip_min")
+                #     row.prop(bm, "clip_max")`
+
                 if bm.operation == "curve":
                     row = col.row(align=True)
+                    row.separator(factor=3)
                     col = row.column()
                     box = col.box()
                     box.template_curve_mapping(bm.curve_owner,"curve")

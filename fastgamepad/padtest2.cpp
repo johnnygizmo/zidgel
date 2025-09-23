@@ -50,8 +50,24 @@ int main(int argc, char* argv[]) {
         return -1;
     }
 
-    std::cout << "Accelerometer enabled. Press Ctrl+C to exit." << std::endl;
-    std::cout << "Accelerometer data (X, Y, Z in m/s²):" << std::endl;
+    // Enable the gyroscope sensor
+    if (!SDL_GamepadHasSensor(gamepad, SDL_SENSOR_GYRO)) {
+        std::cerr << "Gamepad does not have a gyroscope!" << std::endl;
+        SDL_CloseGamepad(gamepad);
+        SDL_free(gamepad_ids);
+        SDL_Quit();
+        return -1;
+    }
+    if (SDL_SetGamepadSensorEnabled(gamepad, SDL_SENSOR_GYRO, true) == 0) {
+        std::cerr << "Failed to enable gyroscope: " << SDL_GetError() << std::endl;
+        SDL_CloseGamepad(gamepad);
+        SDL_free(gamepad_ids);
+        SDL_Quit();
+        return -1;
+    }
+
+    std::cout << "Accelerometer and Gyroscope enabled. Press Ctrl+C to exit." << std::endl;
+    std::cout << "Sensor data (Accelerometer: X, Y, Z in m/s² | Gyroscope: X, Y, Z in rad/s):" << std::endl;
 
     // Main execution loop
     SDL_Event event;
@@ -86,7 +102,7 @@ int main(int argc, char* argv[]) {
                       << " Y: " << std::setw(8) << accel_data[1] 
                       << " Z: " << std::setw(8) << accel_data[2] 
                       << " m/s²   " 
-                      << "\rGyro - X: " 
+                      << "\t\t" << "Gyro - X: " 
                       << std::setw(8)  << gyro_data[0] 
                       << " Y: " << std::setw(8) << gyro_data[1] 
                       << " Z: " << std::setw(8) << gyro_data[2] 

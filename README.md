@@ -2,15 +2,23 @@
 *Johnny Matthews*
 
 ## What's New
+**Version 1.0.10**
+
+* Add Input and Output Clipping
+* Add Input Scaling and Rounding
+* Try to clean up multiple timers causing slowdowns
+* Show Connected Controller Name if Available
+
 
 **Version 1.0.9**
 
 * Add Ability to Change LED color
 * Add Ability to Change Player # Display
 * Turn Controller LED to red when recording
-* Add Touch, Accel and Gyro Inputs
+* Add Touch, Acceleratometer and Gyroscope Inputs
 * Add +=, -=, and *= Assignment for especially with sensor data
 * Only Retrieve Needed Data from Controller instead of all data points
+* Add input scaling and rounding (rounding can help with gyro and acceleratometer data)
 
 **Version 1.0.8**
 

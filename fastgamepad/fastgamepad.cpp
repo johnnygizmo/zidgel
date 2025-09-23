@@ -9,7 +9,7 @@ using namespace std;
 struct EMAState {
     double emaAlpha = 0.2;
     bool initialized = false;
-    float value = 0.0f;
+    float value[3] = {0.0f, 0.0f, 0.0f};
 };
 
 struct DebounceState {
@@ -59,14 +59,14 @@ static PyObject* fg_initialized(PyObject* self, PyObject* args) {
     }
 }
 
-static float emaUpdate(EMAState &state, float newValue) {
+static float emaUpdate(EMAState &state, float newValue, int index=0) {
     if (!state.initialized) {
-        state.value = newValue;   // first sample just seeds it
+        state.value[index] = newValue;   // first sample just seeds it
         state.initialized = true;
     } else {
-        state.value = (float)(emaAlpha * newValue + (1.0 - emaAlpha) * state.value);
+        state.value[index] = (float)(emaAlpha * newValue + (1.0 - emaAlpha) * state.value[index]);
     }
-    return state.value;
+    return state.value[index];
 }
 
 static PyObject* set_led(PyObject* self, PyObject* args) {
@@ -81,6 +81,21 @@ static PyObject* set_led(PyObject* self, PyObject* args) {
     Py_RETURN_NONE;
 
 }
+
+static PyObject* get_name(PyObject* self, PyObject* args) {
+    if (!gamepad) {
+        Py_RETURN_NONE;
+    }
+    const char* name = SDL_GetGamepadName(gamepad);
+    if (!name) {
+        Py_RETURN_NONE;
+    }
+    return Py_BuildValue("s", name);
+
+}
+
+
+
 
 static PyObject* set_player(PyObject* self, PyObject* args) {
     int index = 0;
@@ -137,7 +152,9 @@ static float get_button(int id,int index=0){
         }
 
         if(emaAlpha > 0){
-            value =  emaUpdate(inputs[id].smoothing, value);
+            data[0] =  emaUpdate(inputs[id].smoothing, data[0],0);
+            data[1] =  emaUpdate(inputs[id].smoothing, data[1],1);
+            data[2] =  emaUpdate(inputs[id].smoothing, data[2],2);
         }
         return data[i.index];
     }   else if (i.type==3){                
@@ -406,7 +423,7 @@ static PyObject* fg_init(PyObject* self, PyObject* args) {
         std::cerr << "Failed to open gamepad: " << SDL_GetError() << std::endl;
         SDL_free(gamepad_ids);
         SDL_Quit();
-        return PyErr_Format(PyExc_RuntimeError, "Failed to open gamepad: %s", SDL_GetError());
+        Py_RETURN_NONE;
     }
 
     // Get gamepad name
@@ -415,27 +432,27 @@ static PyObject* fg_init(PyObject* self, PyObject* args) {
 
     // Check if the gamepad has a sensor (accelerometer)
     if (!SDL_GamepadHasSensor(gamepad, SDL_SENSOR_ACCEL)) {
-        std::cerr << "Gamepad does not have an accelerometer!" << std::endl;
-        SDL_CloseGamepad(gamepad);
-        SDL_free(gamepad_ids);
-        SDL_Quit();
-        return PyErr_Format(PyExc_RuntimeError, "Gamepad does not have an accelerometer!");
+        // std::cerr << "Gamepad does not have an accelerometer!" << std::endl;
+        // SDL_CloseGamepad(gamepad);
+        // SDL_free(gamepad_ids);
+        // SDL_Quit();
+        // return PyErr_Format(PyExc_RuntimeError, "Gamepad does not have an accelerometer!");
     }
 
     if (SDL_SetGamepadSensorEnabled(gamepad, SDL_SENSOR_ACCEL, true) == 0) {
-        std::cerr << "Failed to enable accelerometer: " << SDL_GetError() << std::endl;
-        SDL_CloseGamepad(gamepad);
-        SDL_free(gamepad_ids);
-        SDL_Quit();
-        return PyErr_Format(PyExc_RuntimeError, "Failed to enable accelerometer: %s", SDL_GetError());
+        // std::cerr << "Failed to enable accelerometer: " << SDL_GetError() << std::endl;
+        // SDL_CloseGamepad(gamepad);
+        // SDL_free(gamepad_ids);
+        // SDL_Quit();
+        // return PyErr_Format(PyExc_RuntimeError, "Failed to enable accelerometer: %s", SDL_GetError());
     }    
 
     if (SDL_SetGamepadSensorEnabled(gamepad, SDL_SENSOR_GYRO, true) == 0) {
-        std::cerr << "Failed to enable gyroscope: " << SDL_GetError() << std::endl;
-        SDL_CloseGamepad(gamepad);
-        SDL_free(gamepad_ids);
-        SDL_Quit();
-        return PyErr_Format(PyExc_RuntimeError, "Failed to enable gyroscope: %s", SDL_GetError());
+        //std::cerr << "Failed to enable gyroscope: " << SDL_GetError() << std::endl;
+        // SDL_CloseGamepad(gamepad);
+        // SDL_free(gamepad_ids);
+        // SDL_Quit();
+        // return PyErr_Format(PyExc_RuntimeError, "Failed to enable gyroscope: %s", SDL_GetError());
     }    
 
     Py_RETURN_NONE;    
@@ -463,6 +480,7 @@ static PyMethodDef FastGamepadMethods[] = {
 
     {"set_led", set_led, METH_VARARGS,"set led"},     
     {"set_player", set_player, METH_VARARGS,"set player index"},
+    {"get_name", get_name, METH_NOARGS, "Get gamepad name"},
     {"set_debounce", fg_set_debounce, METH_VARARGS, "Set button debounce window (ms)"},
     {"rumble", run_haptic, METH_VARARGS,"run haptic"},
     {"set_smoothing_single", fg_set_smoothing_single, METH_VARARGS, "Set axis smoothing in ms"},

@@ -206,6 +206,17 @@ class ButtonMapping(bpy.types.PropertyGroup):
     is_last_value_captured: bpy.props.BoolProperty(name="Last Value Captured", default=False) # type: ignore
     last_value: bpy.props.FloatProperty(name="Last Value", default=0.0) # type: ignore
 
+    rounding: bpy.props.IntProperty(name="Rounding", default=3, min=0, max=6) # type: ignore
+    scaling: bpy.props.FloatProperty(name="Scaling", default=1.0) # type: ignore
+
+
+    use_input_clipping: bpy.props.BoolProperty(name="Input Clipping", default=False) # type: ignore
+    input_clip_min: bpy.props.FloatProperty(name="Input Clip Min", default=-1.0) # type: ignore
+    input_clip_max: bpy.props.FloatProperty(name="Input Clip Max", default=1.0) # type: ignore
+
+    use_clipping: bpy.props.BoolProperty(name="Clipping", default=False) # type: ignore
+    clip_min: bpy.props.FloatProperty(name="Clip Min", default=-1.0) # type: ignore
+    clip_max: bpy.props.FloatProperty(name="Clip Max", default=1.0) # type: ignore
 
 class MappingSet(bpy.types.PropertyGroup):
     active: bpy.props.BoolProperty(name="Enabled", default=True) # type: ignore

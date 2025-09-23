@@ -25,7 +25,6 @@ if hasattr(os, 'add_dll_directory') and os.name == 'nt':
 from . import fastgamepad
 from . import mapping_data
 
-
 def easing(value, easing_type):
     if easing_type == "linear":
         return value
@@ -78,13 +77,16 @@ class FG_OT_StartController(bpy.types.Operator):
             if not context.screen.is_animation_playing:                
                 bpy.ops.puppetstrings.playback(action="PLAY")
             
-               
                                                 
         if buttons.get("back", 0) == 1:
             if context.screen.is_animation_playing:
                 bpy.ops.puppetstrings.playback(action="STOP")
             else:
                 context.scene.frame_current = context.scene.frame_start
+
+        # if buttons.get("guide", 0) == 1:
+        #     bpy.ops.puppetstrings.playback(action="STOP")
+        #     self.cancel(context)
 
     def modify_keyframe(self, context, mapping, ob, insert):
         index_map = {"x": 0, "y": 1, "z": 2}
@@ -137,26 +139,14 @@ class FG_OT_StartController(bpy.types.Operator):
             return {"CANCELLED"}
 
         if event.type == "TIMER":
-
             buttons_list = [4,5,6]
             m = scene.johnnygizmo_puppetstrings_mapping_sets[scene.johnnygizmo_puppetstrings_active_mapping_set]
             for mapping in m.button_mappings:
-                #print("Mapping: " + mapping.button)
                 bmd = next((b for b in mapping_data.BUTTON_DATA if b[1] == mapping.button), None)
-                ##print(bmd[0])
-
                 if bmd[0] not in buttons_list:                    
                     buttons_list.append(bmd[0])
 
-            #print(buttons_list)
-            #print(fastgamepad.get_button_list(buttons_list))
             combined = fastgamepad.get_button_list(buttons_list)
-
-            # axes = fastgamepad.get_axes()
-            # buttons = fastgamepad.get_buttons()
-            # sensors = fastgamepad.get_sensors()
-            # touch = fastgamepad.get_touch()
-            # combined = {**axes, **buttons, **sensors, **touch}
 
             ob = bpy.context.active_object
             active_mapping_set = self.get_active_mapping_set(context)
@@ -171,6 +161,13 @@ class FG_OT_StartController(bpy.types.Operator):
                     
                     op = mapping.operation
                     raw_value = combined.get(mapping.button)
+
+                    raw_value = raw_value * mapping.scaling
+                    raw_value = round(raw_value, mapping.rounding)
+
+                    if mapping.use_input_clipping:
+                        raw_value = max(mapping.input_clip_min, min(mapping.input_clip_max, raw_value))
+
                     value = raw_value
 
                     value = easing(value, mapping.input_easing)  
@@ -179,11 +176,20 @@ class FG_OT_StartController(bpy.types.Operator):
                     if ob.type == 'ARMATURE' and mapping.mapping_type == "shape_key":
                         continue
 
-                    scale = 1
+                    scale = 1.0
                     assign = " = "
+                    lvalue = ""
+                    rvalue = raw_value
+                    pre_command = ""
+                    retrieve_command = ""
+                    final_command = ""
+                    existing_value = 0.0
+                    temp = 0.0
+
                     if mapping.assignment == "add":
                         assign = " += "
                         scale = 1 / scene.render.fps
+                        
                     elif mapping.assignment == "subtract":
                         assign = " -= "
                         scale = 1 / scene.render.fps
@@ -192,42 +198,55 @@ class FG_OT_StartController(bpy.types.Operator):
                         scale = 1 / scene.render.fps
 
                     command = assign + str(value*scale)
-                    pre_command = ""
                     if mapping.operation == "curve":
                         mapped = mapping.curve_owner.curve.evaluate(mapping.curve_owner.curve.curves[0],value)
                         command = assign + str(round(mapped*scale,6))
+                        rvalue  = str(round(mapped*scale,6))
                     if mapping.operation == "expression":
                         command = mapping.expression
+                        rvalue = mapping.expression
+                        assign = " = "
                     elif mapping.operation == "invertb":
                         command = " = " + str(1 - value)
+                        rvalue = str(1 - value)
+                        assign = " = "
                     elif mapping.operation == "inverta":
                         command = " = " + str(-value)
+                        rvalue = str(-value)
+                        assign = " = "
+
 
                     if mapping.mapping_type == "location":
-                        if ob.type != 'ARMATURE' or mapping.sub_data_path == "":
+                        if ob.type != 'ARMATURE' or mapping.sub_data_path == "" :
                             command = "ob.location." + mapping.axis + command
+                            lvalue = "ob.location." + mapping.axis
                         else:                            
                             command = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].location." + mapping.axis + command
+                            lvalue = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].location." + mapping.axis
 
                     elif mapping.mapping_type == "rotation_euler":                        
-                        if ob.type != 'ARMATURE':
+                        if ob.type != 'ARMATURE' or mapping.sub_data_path == "":
                             pre_command = "ob.rotation_mode = 'XYZ'"
                             command = "ob.rotation_euler." + mapping.axis + command
+                            lvalue = "ob.rotation_euler." + mapping.axis
                         else:            
                             pre_command = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].rotation_mode = 'XYZ'"                
                             command = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].rotation_euler." + mapping.axis + command            
+                            lvalue = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].rotation_euler." + mapping.axis
 
                     elif mapping.mapping_type == "scale":                        
-                        if ob.type != 'ARMATURE':
+                        if ob.type != 'ARMATURE' or mapping.sub_data_path == "":
                             command = "ob.scale." + mapping.axis + command
+                            lvalue = "ob.scale." + mapping.axis
                         else:                            
                             command = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].scale." + mapping.axis + command            
-
+                            lvalue = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].scale." + mapping.axis
 
                     elif mapping.mapping_type == "shape_key":
                         if ob.data.shape_keys:
                             if ob.data.shape_keys.key_blocks.get(mapping.data_path):
                                 command = "ob.data.shape_keys.key_blocks[\"" + mapping.data_path + "\"].value" + command
+                                lvalue = "ob.data.shape_keys.key_blocks[\"" + mapping.data_path + "\"].value"
                             else:
                                 continue
                         else:
@@ -237,19 +256,48 @@ class FG_OT_StartController(bpy.types.Operator):
                             mod = ob.modifiers.get(mapping.data_path)
                             if mod and mapping.sub_data_path:                                
                                 command = "ob.modifiers[\"" + mapping.data_path + "\"]" + mapping.sub_data_path + command
+                                lvalue = "ob.modifiers[\"" + mapping.data_path + "\"]" + mapping.sub_data_path
                             else:
                                 continue
                         else:
                             continue
                     else:
                         command = "ob." + mapping.data_path + " = " + str(value)                               
-                    
-                    try:         
-                        if pre_command != "":
-                            exec(pre_command)          
-                        exec(command)
-                    except Exception as e:
-                        pass
+                        lvalue = "ob." + mapping.data_path
+                        rvalue = str(value)
+                    # try:         
+                    if 1:
+                        if pre_command != "":                            
+                            exec(pre_command)   
+
+                        if not mapping.use_clipping:
+                                final_command = lvalue + assign + str(rvalue)
+                        else:
+                            if mapping.assignment == "equal":
+                                final_command = lvalue + assign + "max(" + str(mapping.clip_min) + ", min(" + str(mapping.clip_max) + "," + str(rvalue) + "))"
+                            else:
+                                existing_value = eval(str(lvalue))
+                                temp = 0.0
+                                if mapping.assignment == "add":
+                                    temp = existing_value + float(rvalue)
+                                elif mapping.assignment == "subtract":
+                                    temp = existing_value - float(rvalue)
+                                elif mapping.assignment == "multiply":                                  
+                                    temp = existing_value * float(rvalue)                                                                    
+                                clamp_value = max(mapping.clip_min, min(mapping.clip_max,temp))
+                                final_command = lvalue + " = " + str(clamp_value)
+                                
+                        if final_command == "":
+                            #print("Cmd: "+command)
+                            exec(command)
+                        else:
+
+                            #print("Fcmd: "+final_command + "    " + str(existing_value))
+                            exec(final_command)
+                    # except Exception as e:
+                    #     print(dir(e))
+                    #     print(e.__context__)
+                    #     pass
                     
 
                     if ob.type=="ARMATURE" and mapping.sub_data_path != "":
@@ -258,8 +306,6 @@ class FG_OT_StartController(bpy.types.Operator):
                     keyframe_rate = context.scene.johnnygizmo_puppetstrings_settings.keyframe_interval
                     if mapping.keyframe_rate_override > 0:
                         keyframe_rate = mapping.keyframe_rate_override
-
-
 
                     #keyframe_rate = context.scene.johnnygizmo_puppetstrings_settings.keyframe_interval  
                     if context.scene.johnnygizmo_puppetstrings_settings.enable_record and context.screen.is_animation_playing and not context.screen.is_scrubbing:
@@ -282,8 +328,6 @@ class FG_OT_StartController(bpy.types.Operator):
 
 
     def execute(self, context):   
-        # if len(bpy.context.scene.johnnygizmo_puppetstrings_buttons_settings)==0:
-        #     mapping_data.create_buttons()
         if self.action == "STOP":                     
             self.cancel(context)
             return {"FINISHED"}
@@ -297,9 +341,15 @@ class FG_OT_StartController(bpy.types.Operator):
             fastgamepad.set_smoothing(context.scene.johnnygizmo_puppetstrings_settings.smoothing)
             wm = context.window_manager
             fps = context.scene.johnnygizmo_puppetstrings_settings.controller_fps
-            interval = 1.0 / fps if fps > 0 else 0.03
-            self._timer = wm.event_timer_add(interval, window=context.window)
-            wm.modal_handler_add(self)
+            interval = 1 / fps if fps > 0 else 0.03
+
+            if self._timer:
+                wm.event_timer_remove(self._timer)
+                self._timer = None
+            else:
+                self._timer = wm.event_timer_add(interval, window=context.window)
+                wm.modal_handler_add(self)
+
             context.scene.johnnygizmo_puppetstrings_settings.controller_running = True
             return {"RUNNING_MODAL"}
 
@@ -310,6 +360,7 @@ class FG_OT_StartController(bpy.types.Operator):
         wm = context.window_manager
         if self._timer:
             wm.event_timer_remove(self._timer)
+            self._timer = None
         context.scene.johnnygizmo_puppetstrings_settings.controller_running = False
         fastgamepad.quit()
         return None

@@ -76,7 +76,7 @@ def getCurve(mapping,settings):
             for strip in layer.strips:
                 for cb in strip.channelbags:
                     for curve in cb.fcurves:   
-                        if ob.type != 'ARMATURE':                                     
+                        if ob.type != 'ARMATURE' or mapping.sub_data_path == "":                                     
                             curve = next((curve for curve in cb.fcurves if curve.data_path ==  mapping.mapping_type and curve.array_index == axis_map[mapping.axis]), None)
                         else:
                             dp = f'pose.bones["{mapping.sub_data_path}"].{mapping.mapping_type}'
