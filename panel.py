@@ -226,17 +226,17 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
                             row.prop(bm, "sub_data_path", text="")
                 else:
                     row.prop(bm, "data_path", text="")
-                row.prop(bm, "keyframe_rate_override", text="Keying Rate")
 
-
+                      
+                row.prop(bm, "keyframe_rate_override", text="Keyframe Rate")
+                
                 row = col.row(align=True)
                 row.separator(factor=3)
                 if(bm.operation == "curve" or bm.operation == "value" or bm.is_trigger):
                     row.prop(bm, "assignment", text="")
                 
-                if not bm.is_trigger:
-                    row.prop(bm, "operation", text="Operation", emboss=True)
-                    row.prop(bm, "input_easing", text="Easing")
+                row.prop(bm, "operation", text="Use", emboss=True)
+                row.prop(bm, "input_easing", text="Easing")
                 if bm.operation == "expression":
                     row.prop(bm, "expression", text="Expression", emboss=True)
                 
