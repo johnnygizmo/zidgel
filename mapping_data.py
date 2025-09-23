@@ -26,10 +26,11 @@ MAPPING_OPS = [
 ]
 
 ASSIGNMENT_TYPES = [
-    ("equal", "=", "Set value"),
-    ("add", "+=", "Add to value"),
-    ("subtract", "-=", "Subtract from value"),
-    ("multiply", "*=", "Multiply value"),
+    ("equal", "= Set Value", "Set value"),
+    ("add", "+= Additive", "Add to value"),
+    ("subtract", "-= Subtractive", "Subtract from value")
+    #,
+    #("multiply", "*=", "Multiply value"),
 ]
 
 MAPPING_TYPES = [
