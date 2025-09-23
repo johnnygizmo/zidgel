@@ -11,6 +11,7 @@ import bpy
 import sys
 import os
 import math
+import time
 from . import rumble
 from pathlib import Path
 from . import mapping_data
@@ -61,6 +62,7 @@ class FG_OT_StartController(bpy.types.Operator):
     _punch_in = None
     _punch_out = None
     _pre_roll = 0
+    _session_start = 0.0
 
     action: bpy.props.EnumProperty(
         name="Action",
@@ -161,16 +163,42 @@ class FG_OT_StartController(bpy.types.Operator):
                     
                     op = mapping.operation
                     raw_value = combined.get(mapping.button)
+                    value = None
+                    if mapping.is_trigger:                        
+                        if raw_value == 0 and mapping.trigger_start_time == mapping_data.UNTRIGGERED:
+                            continue
 
-                    raw_value = raw_value * mapping.scaling
-                    raw_value = round(raw_value, mapping.rounding)
+                        action_time = time.time() - self._session_start
+                        # Triggered and No Current Action - Start Action
+                        if raw_value == 1 and mapping.trigger_start_time == mapping_data.UNTRIGGERED:
+                            mapping.trigger_start_time = action_time
 
-                    if mapping.use_input_clipping:
-                        raw_value = max(mapping.input_clip_min, min(mapping.input_clip_max, raw_value))
+                        # Running Action Finished, clean up                        
+                        if action_time - mapping.trigger_start_time > mapping.trigger_duration:
+                            mapping.trigger_start_time = mapping_data.UNTRIGGERED
+                            #print("resetting" + str(action_time) + " " + str(mapping.trigger_start_time) + " " +str(mapping.trigger_duration   ))
+                            continue
+                        # Maybe scrubbed to past, clean up future presses
+                        elif mapping.trigger_start_time > action_time:
+                            #print("no great")
+                            mapping.trigger_start_time = mapping_data.UNTRIGGERED
+                            continue
 
-                    value = raw_value
+                        # Running action, get value
+                        action_elapsed = action_time - mapping.trigger_start_time
+                        map_point = action_elapsed / mapping.trigger_duration                        
+                        value = mapping.curve_owner.curve.evaluate(mapping.curve_owner.curve.curves[0],map_point)                        
+                        print(str(map_point)+ " "+str(value))
+                        #print("value " + str(action_frame) + " " + str(value))
+                    else:
+                        raw_value = raw_value * mapping.scaling
+                        raw_value = round(raw_value, mapping.rounding)
 
-                    value = easing(value, mapping.input_easing)  
+                        if mapping.use_input_clipping:
+                            raw_value = max(mapping.input_clip_min, min(mapping.input_clip_max, raw_value))
+
+                        value = raw_value
+                        value = easing(value, mapping.input_easing)  
                     
                     ob = bpy.data.objects.get(mapping.object)
                     if ob.type == 'ARMATURE' and mapping.mapping_type == "shape_key":
@@ -179,7 +207,7 @@ class FG_OT_StartController(bpy.types.Operator):
                     scale = 1.0
                     assign = " = "
                     lvalue = ""
-                    rvalue = raw_value
+                    rvalue = value
                     pre_command = ""
                     retrieve_command = ""
                     final_command = ""
@@ -197,55 +225,55 @@ class FG_OT_StartController(bpy.types.Operator):
                         assign = " *= "
                         scale = 1 / scene.render.fps
 
-                    command = assign + str(value*scale)
-                    if mapping.operation == "curve":
+                    #command = assign + str(value*scale)
+                    if mapping.operation == "curve" or mapping.is_trigger:
                         mapped = mapping.curve_owner.curve.evaluate(mapping.curve_owner.curve.curves[0],value)
-                        command = assign + str(round(mapped*scale,6))
-                        rvalue  = str(round(mapped*scale,6))
-                    if mapping.operation == "expression":
-                        command = mapping.expression
+                        #command = assign + str(round(mapped*scale,6)*mapping.output_scaling)
+                        rvalue  = str(round(mapped*scale,6)*mapping.output_scaling)
+                    elif mapping.operation == "expression":
+                        #command = mapping.expression
                         rvalue = mapping.expression
                         assign = " = "
                     elif mapping.operation == "invertb":
-                        command = " = " + str(1 - value)
+                        #command = " = " + str(1 - value)
                         rvalue = str(1 - value)
                         assign = " = "
                     elif mapping.operation == "inverta":
-                        command = " = " + str(-value)
+                        #command = " = " + str(-value)
                         rvalue = str(-value)
                         assign = " = "
 
 
                     if mapping.mapping_type == "location":
                         if ob.type != 'ARMATURE' or mapping.sub_data_path == "" :
-                            command = "ob.location." + mapping.axis + command
+                         #   command = "ob.location." + mapping.axis + command
                             lvalue = "ob.location." + mapping.axis
                         else:                            
-                            command = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].location." + mapping.axis + command
+                          #  command = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].location." + mapping.axis + command
                             lvalue = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].location." + mapping.axis
 
                     elif mapping.mapping_type == "rotation_euler":                        
                         if ob.type != 'ARMATURE' or mapping.sub_data_path == "":
                             pre_command = "ob.rotation_mode = 'XYZ'"
-                            command = "ob.rotation_euler." + mapping.axis + command
+                           # command = "ob.rotation_euler." + mapping.axis + command
                             lvalue = "ob.rotation_euler." + mapping.axis
                         else:            
                             pre_command = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].rotation_mode = 'XYZ'"                
-                            command = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].rotation_euler." + mapping.axis + command            
+                            #command = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].rotation_euler." + mapping.axis + command            
                             lvalue = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].rotation_euler." + mapping.axis
 
                     elif mapping.mapping_type == "scale":                        
                         if ob.type != 'ARMATURE' or mapping.sub_data_path == "":
-                            command = "ob.scale." + mapping.axis + command
+                            #command = "ob.scale." + mapping.axis + command
                             lvalue = "ob.scale." + mapping.axis
                         else:                            
-                            command = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].scale." + mapping.axis + command            
+                            #command = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].scale." + mapping.axis + command            
                             lvalue = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].scale." + mapping.axis
 
                     elif mapping.mapping_type == "shape_key":
                         if ob.data.shape_keys:
                             if ob.data.shape_keys.key_blocks.get(mapping.data_path):
-                                command = "ob.data.shape_keys.key_blocks[\"" + mapping.data_path + "\"].value" + command
+                             #   command = "ob.data.shape_keys.key_blocks[\"" + mapping.data_path + "\"].value" + command
                                 lvalue = "ob.data.shape_keys.key_blocks[\"" + mapping.data_path + "\"].value"
                             else:
                                 continue
@@ -255,7 +283,7 @@ class FG_OT_StartController(bpy.types.Operator):
                         if ob and ob.modifiers:
                             mod = ob.modifiers.get(mapping.data_path)
                             if mod and mapping.sub_data_path:                                
-                                command = "ob.modifiers[\"" + mapping.data_path + "\"]" + mapping.sub_data_path + command
+                              #  command = "ob.modifiers[\"" + mapping.data_path + "\"]" + mapping.sub_data_path + command
                                 lvalue = "ob.modifiers[\"" + mapping.data_path + "\"]" + mapping.sub_data_path
                             else:
                                 continue
@@ -328,6 +356,7 @@ class FG_OT_StartController(bpy.types.Operator):
 
 
     def execute(self, context):   
+        self._session_start = time.time()
         if self.action == "STOP":                     
             self.cancel(context)
             return {"FINISHED"}

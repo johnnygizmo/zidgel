@@ -1,5 +1,6 @@
 import bpy  # type: ignore
 
+UNTRIGGERED = -1.0
 
 VECTOR_AXES = [("x", "X", ""), ("y", "Y", ""), ("z", "Z", "")]
 
@@ -208,7 +209,7 @@ class ButtonMapping(bpy.types.PropertyGroup):
 
     rounding: bpy.props.IntProperty(name="Rounding", default=3, min=0, max=6) # type: ignore
     scaling: bpy.props.FloatProperty(name="Scaling", default=1.0) # type: ignore
-
+    output_scaling: bpy.props.FloatProperty(name="Output Scaling", default=1.0) # type: ignore
 
     use_input_clipping: bpy.props.BoolProperty(name="Input Clipping", default=False) # type: ignore
     input_clip_min: bpy.props.FloatProperty(name="Input Clip Min", default=-1.0) # type: ignore
@@ -218,13 +219,16 @@ class ButtonMapping(bpy.types.PropertyGroup):
     clip_min: bpy.props.FloatProperty(name="Clip Min", default=-1.0) # type: ignore
     clip_max: bpy.props.FloatProperty(name="Clip Max", default=1.0) # type: ignore
 
+    is_trigger: bpy.props.BoolProperty(name="Triggers Curve Action", default=False) #type: ignore
+    trigger_duration: bpy.props.FloatProperty(name="Trigger Duration",default=2.0,min=.01) #type: ignore
+    trigger_start_time: bpy.props.FloatProperty(name="Trigger Start Frame",default=UNTRIGGERED) #type: ignore
+    
+
 class MappingSet(bpy.types.PropertyGroup):
     active: bpy.props.BoolProperty(name="Enabled", default=True) # type: ignore
     name: bpy.props.StringProperty(name="Name", default="New Mapping Set") # type: ignore
     button_mappings: bpy.props.CollectionProperty(type=ButtonMapping) # type: ignore
     active_button_mapping_index: bpy.props.IntProperty(name="Active Button Mapping Index", default=0) # type: ignore
-
-
 
 
 def register():

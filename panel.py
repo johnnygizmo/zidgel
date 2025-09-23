@@ -175,23 +175,25 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
                 "bones",
                 text=""
             )
+            row.prop(bm, "is_trigger",text="",icon="IPO_ELASTIC")
             
             if bm.show_panel:
+                                
+                if not bm.is_trigger:
+                    row = col.row(align=True)
+                    row.separator(factor=3)
+                    row.label(text="Input Adjustments:")
+                    row.prop(bm, "scaling", text="Scaling")
+                    row.prop(bm, "rounding", text="Rounding")
 
-                row = col.row(align=True)
-                row.separator(factor=3)
-                row.label(text="Input Adjustments:")
-                row.prop(bm, "scaling", text="Scaling")
-                row.prop(bm, "rounding", text="Rounding")
-
-                row = col.row(align=True)
-                row.separator(factor=3)
-                row.prop(bm, "use_input_clipping", text="Input Clipping")
-                box = row.box()
-                box.enabled = bm.use_input_clipping
-                row_in_box = box.row(align=True)
-                row_in_box.prop(bm, "input_clip_min", text="Min")
-                row_in_box.prop(bm, "input_clip_max", text="Max")
+                    row = col.row(align=True)
+                    row.separator(factor=3)
+                    row.prop(bm, "use_input_clipping", text="Input Clipping")
+                    box = row.box()
+                    box.enabled = bm.use_input_clipping
+                    row_in_box = box.row(align=True)
+                    row_in_box.prop(bm, "input_clip_min", text="Min")
+                    row_in_box.prop(bm, "input_clip_max", text="Max")
 
                 row = col.row(align=True)
                 row.separator(factor=3)
@@ -201,13 +203,6 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
                 row_in_box = box.row(align=True)
                 row_in_box.prop(bm, "clip_min", text="Min")
                 row_in_box.prop(bm, "clip_max", text="Max")
-
-
-
-
-
-
-
 
                 row = col.row(align=True)
                 row.separator(factor=3)
@@ -231,27 +226,35 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
                             row.prop(bm, "sub_data_path", text="")
                 else:
                     row.prop(bm, "data_path", text="")
-                row.prop(bm, "keyframe_rate_override", text="KF Rate")
+                row.prop(bm, "keyframe_rate_override", text="Keying Rate")
 
 
                 row = col.row(align=True)
                 row.separator(factor=3)
-                if(bm.operation == "curve" or bm.operation == "value"):
+                if(bm.operation == "curve" or bm.operation == "value" or bm.is_trigger):
                     row.prop(bm, "assignment", text="")
                 
-                row.prop(bm, "operation", text="Operation", emboss=True)
-                row.prop(bm, "input_easing", text="Easing")
+                if not bm.is_trigger:
+                    row.prop(bm, "operation", text="Operation", emboss=True)
+                    row.prop(bm, "input_easing", text="Easing")
                 if bm.operation == "expression":
                     row.prop(bm, "expression", text="Expression", emboss=True)
                 
 
+                if bm.is_trigger:
+                    row.prop(bm, "trigger_frames")                    
+                    row.prop(bm, "output_scaling")
+                elif bm.operation == "curve":                   
+                    row.prop(bm, "output_scaling")
+
+                    
 
                 # row.prop(bm, "use_clipping")
                 # if bm.use_clipping:
                 #     row.prop(bm, "clip_min")
                 #     row.prop(bm, "clip_max")`
 
-                if bm.operation == "curve":
+                if bm.operation == "curve" or bm.is_trigger:
                     row = col.row(align=True)
                     row.separator(factor=3)
                     col = row.column()
