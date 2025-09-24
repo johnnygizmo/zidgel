@@ -1,14 +1,28 @@
 import bpy
+import tomllib
+from pathlib import Path
 from . import fastgamepad
 
 class FG_PT_MappingSetsPanel(bpy.types.Panel):
-    bl_label = "Puppet Strings"
+    bl_label = "Puppet Strings " 
     bl_idname = "FG_PT_mapping_sets"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_category = "Gamepad"
 
+    # def get_addon_version(self):
+    #     manifest_path = Path(__file__).parent / "blender_manifest.toml"
+    #     if manifest_path.exists():
+    #         with open(manifest_path, "rb") as f:
+    #             manifest_data = tomllib.load(f) # Use toml.load(f) for older Python
+    #         return manifest_data.get("version")
+    #     return None
+
     def draw(self, context):
+        # if self.bl_label == "Puppet Strings ":
+        #     self.bl_label += self.get_addon_version()
+        
+
         layout = self.layout
         scene = context.scene
         settings  = scene.johnnygizmo_puppetstrings_settings
@@ -83,10 +97,11 @@ class FG_PT_MappingSetsPanel(bpy.types.Panel):
         col.operator("fg.add_mapping_set", icon='ADD', text="")
         col.operator("fg.remove_mapping_set", icon='REMOVE', text="")
         col.separator(factor=3)
-        col.operator("mapping.import_set", icon='IMPORT', text="")
-        col.separator(factor=1)
         col.operator("mapping.export_set", icon='FILE_TICK', text="")
         col.separator(factor=1)
+        col.operator("mapping.import_set", icon='FILE_FOLDER', text="")
+        col.separator(factor=1)
+
         col.operator("mapping.duplicate_set", icon='DUPLICATE', text="")       
 
 class FG_PT_ButtonMappingsPanel(bpy.types.Panel):
