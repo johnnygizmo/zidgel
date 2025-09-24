@@ -8,19 +8,19 @@ bl_info = {
 
 from multiprocessing import context
 import bpy
-import sys
-import os
+#import sys
+#import os
 import math
-from . import rumble
-from pathlib import Path
+#from . import rumble
+#from pathlib import Path
 from . import mapping_data
 from . import handlers
 
-extension_dir = Path(__file__).parent
-if str(extension_dir) not in sys.path:
-    sys.path.insert(0, str(extension_dir))
-if hasattr(os, 'add_dll_directory') and os.name == 'nt':
-    os.add_dll_directory(str(extension_dir))
+# extension_dir = Path(__file__).parent
+# if str(extension_dir) not in sys.path:
+#     sys.path.insert(0, str(extension_dir))
+# if hasattr(os, 'add_dll_directory') and os.name == 'nt':
+#     os.add_dll_directory(str(extension_dir))
 
 from . import fastgamepad
 from . import mapping_data
