@@ -82,6 +82,11 @@ class FG_PT_MappingSetsPanel(bpy.types.Panel):
         col = row.column(align=True)
         col.operator("fg.add_mapping_set", icon='ADD', text="")
         col.operator("fg.remove_mapping_set", icon='REMOVE', text="")
+        col.separator(factor=3)
+        col.operator("mapping.import_set", icon='IMPORT', text="")
+        col.separator(factor=1)
+        col.operator("mapping.export_set", icon='EXPORT', text="")
+        
 
 class FG_PT_ButtonMappingsPanel(bpy.types.Panel):
     bl_label = "Button Mappings"
@@ -253,7 +258,7 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
                 #     row.prop(bm, "clip_min")
                 #     row.prop(bm, "clip_max")`
 
-                if bm.operation == "curve":
+                if bm.operation == "curve" and bm.curve_owner:
                     row = col.row(align=True)
                     row.separator(factor=3)
                     col = row.column()
