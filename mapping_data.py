@@ -145,7 +145,7 @@ def get_buttons(a,aa):
 def set_active_object(mapping, context):
     if mapping.object_target is None:
         mapping.sub_data_path = ""
-        return False
+        return None
     for o in bpy.context.selected_objects:
         o.select_set(False)
     mapping.object_target.select_set(True)
@@ -154,7 +154,7 @@ def set_active_object(mapping, context):
     if mapping.object_target.type == 'ARMATURE':
         if bpy.context.object.mode != 'POSE':
             bpy.ops.object.mode_set(mode='POSE')    
-    return True
+    return None
 
 def post_bone_pick(mapping, context):
     if mapping.object_target.type == 'ARMATURE' and mapping.sub_data_path != "":
