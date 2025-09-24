@@ -85,8 +85,9 @@ class FG_PT_MappingSetsPanel(bpy.types.Panel):
         col.separator(factor=3)
         col.operator("mapping.import_set", icon='IMPORT', text="")
         col.separator(factor=1)
-        col.operator("mapping.export_set", icon='EXPORT', text="")
-        
+        col.operator("mapping.export_set", icon='FILE_TICK', text="")
+        col.separator(factor=1)
+        col.operator("mapping.duplicate_set", icon='DUPLICATE', text="")       
 
 class FG_PT_ButtonMappingsPanel(bpy.types.Panel):
     bl_label = "Button Mappings"
@@ -156,7 +157,16 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
         if self.layout_type in {'DEFAULT', 'COMPACT'}:
             col = layout.column()
             row = col.row(align=True)
-           
+            
+            map_set = bpy.context.scene.johnnygizmo_puppetstrings_active_mapping_set
+            ms = bpy.context.scene.johnnygizmo_puppetstrings_mapping_sets[map_set]
+        
+            #if ms.active.button_mapping_index == index:
+            if ms.active_button_mapping_index == index:
+                row.label(text="",icon="SOLO_ON")
+            else:
+                row.label(text="",icon="SOLO_OFF")
+
             if bm.enabled:
                 row.prop(bm, "enabled", text="", icon="CHECKBOX_HLT")
             else:
@@ -205,13 +215,6 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
                 row_in_box = box.row(align=True)
                 row_in_box.prop(bm, "clip_min", text="Min")
                 row_in_box.prop(bm, "clip_max", text="Max")
-
-
-
-
-
-
-
 
                 row = col.row(align=True)
                 row.separator(factor=3)

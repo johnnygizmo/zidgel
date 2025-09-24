@@ -3,6 +3,11 @@
 
 ## What's New
 
+**Version 1.0.12**
+
+* Add Duplication Button Groups
+* Add Star Icon next to button mapping for easier selection
+
 **Version 1.0.11**
 
 * Add Importing and Exporting Button Groups
