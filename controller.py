@@ -150,17 +150,20 @@ class FG_OT_StartController(bpy.types.Operator):
 
             combined = fastgamepad.get_button_list(buttons_list)
 
-            ob = bpy.context.active_object
+            #ob = bpy.context.active_object
             active_mapping_set = self.get_active_mapping_set(context)
             
             # Handle Start/Stop
             self.playback_controls(context, combined)
 
-            if ob and active_mapping_set and active_mapping_set.active :
+            if active_mapping_set and active_mapping_set.active :
                 for mapping in active_mapping_set.button_mappings:
-                    if not mapping.enabled or mapping.object == "":
+                    # if not mapping.enabled or mapping.object == "":
+                    #     continue
+                    if not mapping.enabled or mapping.object_target == "":
                         continue
-                    
+
+
                     op = mapping.operation
                     raw_value = combined.get(mapping.button)
                     value = None
@@ -200,8 +203,11 @@ class FG_OT_StartController(bpy.types.Operator):
                         value = raw_value
                         value = easing(value, mapping.input_easing)  
                     
-                    ob = bpy.data.objects.get(mapping.object)
-                    if ob.type == 'ARMATURE' and mapping.mapping_type == "shape_key":
+                    #ob = bpy.data.objects.get(mapping.object)
+                    ob = mapping.object_target
+                    if not ob:
+                        continue
+                    if ob and ob.type == 'ARMATURE' and mapping.mapping_type == "shape_key":
                         continue
 
                     scale = 1.0
@@ -245,15 +251,15 @@ class FG_OT_StartController(bpy.types.Operator):
 
 
                     if mapping.mapping_type == "location":
-                        if ob.type != 'ARMATURE' or mapping.sub_data_path == "" :
-                         #   command = "ob.location." + mapping.axis + command
+                        if ob and ob.type != 'ARMATURE' or mapping.sub_data_path == "" :
+                            command = "ob.location." + mapping.axis + command
                             lvalue = "ob.location." + mapping.axis
                         else:                            
                           #  command = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].location." + mapping.axis + command
                             lvalue = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].location." + mapping.axis
 
                     elif mapping.mapping_type == "rotation_euler":                        
-                        if ob.type != 'ARMATURE' or mapping.sub_data_path == "":
+                        if ob and ob.type != 'ARMATURE' or mapping.sub_data_path == "":
                             pre_command = "ob.rotation_mode = 'XYZ'"
                            # command = "ob.rotation_euler." + mapping.axis + command
                             lvalue = "ob.rotation_euler." + mapping.axis
@@ -263,15 +269,15 @@ class FG_OT_StartController(bpy.types.Operator):
                             lvalue = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].rotation_euler." + mapping.axis
 
                     elif mapping.mapping_type == "scale":                        
-                        if ob.type != 'ARMATURE' or mapping.sub_data_path == "":
-                            #command = "ob.scale." + mapping.axis + command
+                        if ob and ob.type != 'ARMATURE' or mapping.sub_data_path == "":
+                            command = "ob.scale." + mapping.axis + command
                             lvalue = "ob.scale." + mapping.axis
                         else:                            
                             #command = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].scale." + mapping.axis + command            
                             lvalue = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].scale." + mapping.axis
 
                     elif mapping.mapping_type == "shape_key":
-                        if ob.data.shape_keys:
+                        if ob and ob.data.shape_keys:
                             if ob.data.shape_keys.key_blocks.get(mapping.data_path):
                              #   command = "ob.data.shape_keys.key_blocks[\"" + mapping.data_path + "\"].value" + command
                                 lvalue = "ob.data.shape_keys.key_blocks[\"" + mapping.data_path + "\"].value"

@@ -16,17 +16,21 @@ from . import controller
 from . import panel
 from . import mapping_data
 from . import playback
+from . import save_load
 
 def register(): 
     settings.register()
     mapping_data.register()
     playback.register()
     controller.register()
+    save_load.register()
     panel.register()
+    
     
 
 def unregister(): 
     panel.unregister()
+    save_load.unregister()
     controller.unregister()
     mapping_data.unregister()
     playback.unregister()

@@ -2,6 +2,12 @@
 *Johnny Matthews*
 
 ## What's New
+
+**Version 1.0.11**
+
+* Add Importing and Exporting Button Groups
+* Object Selection has a picker
+
 **Version 1.0.10**
 
 * Add Input and Output Clipping
