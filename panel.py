@@ -248,12 +248,10 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
                 
 
                 if bm.is_trigger:
-                    row.prop(bm, "trigger_frames")                    
+                    row.prop(bm, "trigger_duration")                    
                     row.prop(bm, "output_scaling")
                 elif bm.operation == "curve":                   
-                    row.prop(bm, "output_scaling")
-
-                    
+                    row.prop(bm, "output_scaling")                  
 
                 # row.prop(bm, "use_clipping")
                 # if bm.use_clipping:

@@ -174,6 +174,8 @@ class FG_OT_StartController(bpy.types.Operator):
                         action_time = time.time() - self._session_start
                         # Triggered and No Current Action - Start Action
                         if raw_value == 1 and mapping.trigger_start_time == mapping_data.UNTRIGGERED:
+                            print("triggered")
+                            action_time = time.time() - self._session_start
                             mapping.trigger_start_time = action_time
 
                         # Running Action Finished, clean up                        
@@ -189,8 +191,8 @@ class FG_OT_StartController(bpy.types.Operator):
 
                         # Running action, get value
                         action_elapsed = action_time - mapping.trigger_start_time
-                        map_point = action_elapsed / mapping.trigger_duration                        
-                        value = mapping.curve_owner.curve.evaluate(mapping.curve_owner.curve.curves[0],map_point)                        
+                        map_point = round(action_elapsed / mapping.trigger_duration,4)
+                        value = round(mapping.curve_owner.curve.evaluate(mapping.curve_owner.curve.curves[0],map_point)/mapping.trigger_duration,4)
                         print(str(map_point)+ " "+str(value))
                         #print("value " + str(action_frame) + " " + str(value))
                     else:
@@ -252,7 +254,7 @@ class FG_OT_StartController(bpy.types.Operator):
 
                     if mapping.mapping_type == "location":
                         if ob and ob.type != 'ARMATURE' or mapping.sub_data_path == "" :
-                            command = "ob.location." + mapping.axis + command
+                           # command = "ob.location." + mapping.axis + command
                             lvalue = "ob.location." + mapping.axis
                         else:                            
                           #  command = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].location." + mapping.axis + command
