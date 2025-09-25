@@ -2,6 +2,20 @@ import bpy
 from . import fastgamepad
 import version
 
+
+
+class FG_OT_ShowHideAllButtonMappings(bpy.types.Operator):
+    bl_idname = "fg.show_hide_all_button_mappings"
+    bl_label = "Show/Hide All Button Mappings"
+
+    show: bpy.props.BoolProperty(default=True)
+
+    def execute(self, context):
+        ms = context.scene.johnnygizmo_puppetstrings_mapping_sets[context.scene.johnnygizmo_puppetstrings_active_mapping_set]
+        for bm in ms.button_mappings:
+            bm.show_panel = self.show
+        return {'FINISHED'}
+
 class FG_PT_MappingSetsPanel(bpy.types.Panel):
     bl_label = "Puppet Strings" 
     bl_idname = "FG_PT_mapping_sets"
@@ -121,6 +135,11 @@ class FG_PT_ButtonMappingsPanel(bpy.types.Panel):
         col.operator("fg.remove_button_mapping", icon='REMOVE', text="")        
         col.separator()
         col.operator("mapping.duplicate_button_mapping", icon='DUPLICATE', text="")  
+        col.separator()
+        col.operator("fg.show_hide_all_button_mappings", text="", icon="HIDE_OFF").show = True
+        col.operator("fg.show_hide_all_button_mappings", text="",icon="HIDE_ON").show = False
+                
+        
         col = row.column(align=True)
         
        
@@ -352,8 +371,10 @@ def register():
     bpy.utils.register_class(FG_OT_RemoveMappingSet)
     bpy.utils.register_class(FG_OT_AddButtonMapping)
     bpy.utils.register_class(FG_OT_RemoveButtonMapping)
+    bpy.utils.register_class(FG_OT_ShowHideAllButtonMappings)
    
 def unregister():
+    bpy.utils.unregister_class(FG_OT_ShowHideAllButtonMappings)
     bpy.utils.unregister_class(FG_OT_RemoveButtonMapping)
     bpy.utils.unregister_class(FG_OT_AddButtonMapping)
     bpy.utils.unregister_class(FG_OT_RemoveMappingSet)
