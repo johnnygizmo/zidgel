@@ -1,5 +1,6 @@
 import bpy
 from . import fastgamepad
+import version
 
 class FG_PT_MappingSetsPanel(bpy.types.Panel):
     bl_label = "Puppet Strings" 
@@ -11,9 +12,7 @@ class FG_PT_MappingSetsPanel(bpy.types.Panel):
 
 
     def draw(self, context):
-        # if self.bl_label == "Puppet Strings":
-        #     self.bl_label += self.get_addon_version()
-        
+        self.bl_label = "Puppet Strings v" + version.VERSION
 
         layout = self.layout
         scene = context.scene
