@@ -25,16 +25,9 @@ from . import handlers
 from . import fastgamepad
 from . import mapping_data
 
-import tomllib
-from pathlib import Path
 
-def get_addon_version():
-    manifest_path = Path(__file__).parent / "blender_manifest.toml"
-    if manifest_path.exists():
-        with open(manifest_path, "rb") as f:
-            manifest_data = tomllib.load(f) # Use toml.load(f) for older Python
-        return manifest_data.get("version")
-    return None
+
+
 
 def easing(value, easing_type):
     if easing_type == "linear":
@@ -228,52 +221,52 @@ class FG_OT_StartController(bpy.types.Operator):
                     command = assign + str(value*scale)
                     if mapping.operation == "curve":
                         mapped = mapping.curve_owner.curve.evaluate(mapping.curve_owner.curve.curves[0],value)
-                        command = assign + str(round(mapped*scale,6))
+                        #command = assign + str(round(mapped*scale,6))
                         rvalue  = str(round(mapped*scale,6))
                     if mapping.operation == "expression":
-                        command = mapping.expression
+                        #command = mapping.expression
                         rvalue = mapping.expression
                         assign = " = "
                     elif mapping.operation == "invertb":
-                        command = " = " + str(1 - value)
+                        #command = " = " + str(1 - value)
                         rvalue = str(1 - value)
                         assign = " = "
                     elif mapping.operation == "inverta":
-                        command = " = " + str(-value)
+                        #command = " = " + str(-value)
                         rvalue = str(-value)
                         assign = " = "
 
 
                     if mapping.mapping_type == "location":
                         if ob and ob.type != 'ARMATURE' or mapping.sub_data_path == "" :
-                            command = "ob.location." + mapping.axis + command
+                            #command = "ob.location." + mapping.axis + command
                             lvalue = "ob.location." + mapping.axis
                         else:                            
-                            command = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].location." + mapping.axis + command
+                            #command = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].location." + mapping.axis + command
                             lvalue = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].location." + mapping.axis
 
                     elif mapping.mapping_type == "rotation_euler":                        
                         if ob and ob.type != 'ARMATURE' or mapping.sub_data_path == "":
                             pre_command = "ob.rotation_mode = 'XYZ'"
-                            command = "ob.rotation_euler." + mapping.axis + command
+                            #command = "ob.rotation_euler." + mapping.axis + command
                             lvalue = "ob.rotation_euler." + mapping.axis
                         else:            
                             pre_command = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].rotation_mode = 'XYZ'"                
-                            command = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].rotation_euler." + mapping.axis + command            
+                            #command = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].rotation_euler." + mapping.axis + command            
                             lvalue = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].rotation_euler." + mapping.axis
 
                     elif mapping.mapping_type == "scale":                        
                         if ob and ob.type != 'ARMATURE' or mapping.sub_data_path == "":
-                            command = "ob.scale." + mapping.axis + command
+                            #command = "ob.scale." + mapping.axis + command
                             lvalue = "ob.scale." + mapping.axis
                         else:                            
-                            command = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].scale." + mapping.axis + command            
+                            #command = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].scale." + mapping.axis + command            
                             lvalue = "ob.pose.bones[\""+ mapping.sub_data_path +"\"].scale." + mapping.axis
 
                     elif mapping.mapping_type == "shape_key":
                         if ob and ob.data.shape_keys:
                             if ob.data.shape_keys.key_blocks.get(mapping.data_path):
-                                command = "ob.data.shape_keys.key_blocks[\"" + mapping.data_path + "\"].value" + command
+                                #command = "ob.data.shape_keys.key_blocks[\"" + mapping.data_path + "\"].value" + command
                                 lvalue = "ob.data.shape_keys.key_blocks[\"" + mapping.data_path + "\"].value"
                             else:
                                 continue
@@ -283,8 +276,8 @@ class FG_OT_StartController(bpy.types.Operator):
                         if ob and ob.modifiers:
                             mod = ob.modifiers.get(mapping.data_path)
                             if mod and mapping.sub_data_path:                                
-                                command = "ob.modifiers[\"" + mapping.data_path + "\"]" + mapping.sub_data_path + command
-                                lvalue = "ob.modifiers[\"" + mapping.data_path + "\"]" + mapping.sub_data_path
+                                #command = "ob.modifiers[\"" + mapping.data_path + "\"]" + mapping.sub_data_path + command
+                                lvalue = "ob.modifiers[\"" + mapping.data_path + "\"]." + mapping.sub_data_path
                             else:
                                 continue
                         else:
@@ -297,6 +290,9 @@ class FG_OT_StartController(bpy.types.Operator):
                     if 1:
                         if pre_command != "":                            
                             exec(pre_command)   
+
+                        if mapping.rounding == 0:
+                            rvalue = int(rvalue)
 
                         if not mapping.use_clipping:
                                 final_command = lvalue + assign + str(rvalue)
