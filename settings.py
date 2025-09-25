@@ -98,7 +98,10 @@ class JOHNNYGIZMO_PuppetStringsSettings(bpy.types.PropertyGroup):
         default="none",
     )  # type: ignore
     
-
+    version: bpy.props.StringProperty(
+        name="Version",
+        default= ""
+        )  # type: ignore
 
 def register():
     bpy.utils.register_class(JOHNNYGIZMO_PuppetStringsSettings)

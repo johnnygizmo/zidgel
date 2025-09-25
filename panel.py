@@ -1,25 +1,17 @@
 import bpy
-import tomllib
-from pathlib import Path
 from . import fastgamepad
 
 class FG_PT_MappingSetsPanel(bpy.types.Panel):
-    bl_label = "Puppet Strings " 
+    bl_label = "Puppet Strings" 
     bl_idname = "FG_PT_mapping_sets"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_category = "Gamepad"
 
-    # def get_addon_version(self):
-    #     manifest_path = Path(__file__).parent / "blender_manifest.toml"
-    #     if manifest_path.exists():
-    #         with open(manifest_path, "rb") as f:
-    #             manifest_data = tomllib.load(f) # Use toml.load(f) for older Python
-    #         return manifest_data.get("version")
-    #     return None
+
 
     def draw(self, context):
-        # if self.bl_label == "Puppet Strings ":
+        # if self.bl_label == "Puppet Strings":
         #     self.bl_label += self.get_addon_version()
         
 
@@ -128,7 +120,12 @@ class FG_PT_ButtonMappingsPanel(bpy.types.Panel):
         col = row.column(align=True)
         col.operator("fg.add_button_mapping", icon='ADD', text="")
         col.operator("fg.remove_button_mapping", icon='REMOVE', text="")        
+        col.separator()
+        col.operator("mapping.duplicate_button_mapping", icon='DUPLICATE', text="")  
         col = row.column(align=True)
+        
+       
+
        
 
 class PUPPETSTRINGS_PT_buttons(bpy.types.Panel):
@@ -206,7 +203,6 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
                 )
                             
             if bm.show_panel:
-
                 row = col.row(align=True)
                 row.separator(factor=3)
                 row.label(text="Input Adjustments:")
