@@ -8,8 +8,8 @@ bl_info = {
 
 from multiprocessing import context
 import bpy
-import sys
-import os
+#import sys
+#import os
 import math
 import time
 from . import rumble
@@ -17,14 +17,25 @@ from pathlib import Path
 from . import mapping_data
 from . import handlers
 
-extension_dir = Path(__file__).parent
-if str(extension_dir) not in sys.path:
-    sys.path.insert(0, str(extension_dir))
-if hasattr(os, 'add_dll_directory') and os.name == 'nt':
-    os.add_dll_directory(str(extension_dir))
+# extension_dir = Path(__file__).parent
+# if str(extension_dir) not in sys.path:
+#     sys.path.insert(0, str(extension_dir))
+# if hasattr(os, 'add_dll_directory') and os.name == 'nt':
+#     os.add_dll_directory(str(extension_dir))
 
 from . import fastgamepad
 from . import mapping_data
+
+import tomllib
+from pathlib import Path
+
+def get_addon_version():
+    manifest_path = Path(__file__).parent / "blender_manifest.toml"
+    if manifest_path.exists():
+        with open(manifest_path, "rb") as f:
+            manifest_data = tomllib.load(f) # Use toml.load(f) for older Python
+        return manifest_data.get("version")
+    return None
 
 def easing(value, easing_type):
     if easing_type == "linear":
@@ -137,12 +148,23 @@ class FG_OT_StartController(bpy.types.Operator):
         settings = scene.johnnygizmo_puppetstrings_settings
         settings.controller_running = fastgamepad.initialized()
         if not settings.controller_running:
+            self.report({'WARNING'}, "Controller not running")
             self.cancel(context)
             return {"CANCELLED"}
 
         if event.type == "TIMER":
             buttons_list = [4,5,6]
+            if len(scene.johnnygizmo_puppetstrings_mapping_sets) == 0:
+                self.report({'WARNING'}, "No mapping sets found")
+                self.cancel(context)
+                return {"CANCELLED"}               
+
             m = scene.johnnygizmo_puppetstrings_mapping_sets[scene.johnnygizmo_puppetstrings_active_mapping_set]
+            if len(m.button_mappings) == 0:
+                self.report({'WARNING'}, "No mappings defined in set")
+                self.cancel(context)
+                return {"CANCELLED"}  
+                       
             for mapping in m.button_mappings:
                 bmd = next((b for b in mapping_data.BUTTON_DATA if b[1] == mapping.button), None)
                 if bmd[0] not in buttons_list:                    
@@ -369,11 +391,10 @@ class FG_OT_StartController(bpy.types.Operator):
             self.cancel(context)
             return {"FINISHED"}
         else:
-
             self.ensure_handler(bpy.app.handlers.animation_playback_pre, handlers.pre_playback_handler)
             self.ensure_handler(bpy.app.handlers.animation_playback_post, handlers.post_playback_handler)
             self.ensure_handler(bpy.app.handlers.frame_change_post, handlers.pre_frame_change_handler)
-        
+
             fastgamepad.init()
             fastgamepad.set_smoothing(context.scene.johnnygizmo_puppetstrings_settings.smoothing)
             wm = context.window_manager

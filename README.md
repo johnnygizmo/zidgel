@@ -1,7 +1,18 @@
 # Puppetstrings
 *Johnny Matthews*
 
+## Todo
+
+
 ## What's New
+**Version 1.1.1**
+
+* Add duplicate mapping button
+
+**Version 1.1.0**
+
+* Add Duplication Button Groups
+* Add Star Icon next to button mapping for easier selection
 
 **Version 1.0.11**
 

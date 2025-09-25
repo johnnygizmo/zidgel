@@ -135,10 +135,130 @@ class IMPORT_OT_mapping_set(bpy.types.Operator):
         context.window_manager.fileselect_add(self)
         return {'RUNNING_MODAL'}    
     
+
+class DUPLICATE_OT_mapping_set(bpy.types.Operator):
+    bl_idname = "mapping.duplicate_set"
+    bl_label = "Duplicate Mapping Set"
+
+    def execute(self, context):
+        scene = context.scene
+        sets = scene.johnnygizmo_puppetstrings_mapping_sets
+        idx = scene.johnnygizmo_puppetstrings_active_mapping_set
+        if idx >= len(sets):
+            self.report({'ERROR'}, "No active mapping set to duplicate")
+            return {'CANCELLED'}
+        src_set = sets[idx]
+        new_set = sets.add()
+        new_set.name = src_set.name + " Copy"
+        new_set.active = src_set.active
+        # Copy all button mappings
+        for src_bm in src_set.button_mappings:
+            bm = new_set.button_mappings.add()
+            for k in src_bm.__annotations__.keys():
+                v = getattr(src_bm, k)
+                if k == "object_target":
+                    bm.object_target = v
+                elif k == "curve_owner":
+                    if src_bm.curve_owner and src_bm.curve_owner.curve:
+                        brush = bpy.data.brushes.new(name="DuplicatedCurve", mode='TEXTURE_PAINT')
+                        src_curve = src_bm.curve_owner.curve
+                        dst_curve = brush.curve
+                        dst_curve.clip_min_x = src_curve.clip_min_x
+                        dst_curve.clip_max_x = src_curve.clip_max_x
+                        dst_curve.clip_min_y = src_curve.clip_min_y
+                        dst_curve.clip_max_y = src_curve.clip_max_y
+                        # Remove extra points
+                        points = dst_curve.curves[0].points
+                        while len(points) > 2:
+                            points.remove(points[2])
+                        # Add points to match source
+                        i = len(src_curve.curves[0].points) - 2
+                        for j in range(i):
+                            points.new(.5, .5)
+                        for j, src_pt in enumerate(src_curve.curves[0].points):
+                            points[j].location = src_pt.location
+                            points[j].handle_type = src_pt.handle_type
+                        bm.curve_owner = brush
+                        bm.curve_owner.curve.reset_view()
+                        bm.curve_owner.curve.update()
+                    else:
+                        bm.curve_owner = None
+                else:
+                    try:
+                        setattr(bm, k, v)
+                    except Exception:
+                        pass
+        scene.johnnygizmo_puppetstrings_active_mapping_set = len(sets) - 1
+        self.report({'INFO'}, "Mapping set duplicated")
+        return {'FINISHED'}
+
+class DUPLICATE_OT_button_mapping(bpy.types.Operator):
+    bl_idname = "mapping.duplicate_button_mapping"
+    bl_label = "Duplicate Button Mapping"
+
+    def execute(self, context):
+        scene = context.scene
+        sets = scene.johnnygizmo_puppetstrings_mapping_sets
+        set_idx = scene.johnnygizmo_puppetstrings_active_mapping_set
+        if set_idx >= len(sets):
+            self.report({'ERROR'}, "No active mapping set")
+            return {'CANCELLED'}
+        mapping_set = sets[set_idx]
+        bm_idx = mapping_set.active_button_mapping_index
+        if bm_idx >= len(mapping_set.button_mappings):
+            self.report({'ERROR'}, "No active button mapping to duplicate")
+            return {'CANCELLED'}
+        src_bm = mapping_set.button_mappings[bm_idx]
+        bm = mapping_set.button_mappings.add()
+        # Copy all properties
+        for k in src_bm.__annotations__.keys():
+            v = getattr(src_bm, k)
+            if k == "object_target":
+                bm.object_target = v
+            elif k == "curve_owner":
+                if src_bm.curve_owner and src_bm.curve_owner.curve:
+                    brush = bpy.data.brushes.new(name="DuplicatedCurve", mode='TEXTURE_PAINT')
+                    src_curve = src_bm.curve_owner.curve
+                    dst_curve = brush.curve
+                    dst_curve.clip_min_x = src_curve.clip_min_x
+                    dst_curve.clip_max_x = src_curve.clip_max_x
+                    dst_curve.clip_min_y = src_curve.clip_min_y
+                    dst_curve.clip_max_y = src_curve.clip_max_y
+                    points = dst_curve.curves[0].points
+                    while len(points) > 2:
+                        points.remove(points[2])
+                    i = len(src_curve.curves[0].points) - 2
+                    for j in range(i):
+                        points.new(.5, .5)
+                    for j, src_pt in enumerate(src_curve.curves[0].points):
+                        points[j].location = src_pt.location
+                        points[j].handle_type = src_pt.handle_type
+                    bm.curve_owner = brush
+                    bm.curve_owner.curve.reset_view()
+                    bm.curve_owner.curve.update()
+                else:
+                    bm.curve_owner = None
+            else:
+                try:
+                    setattr(bm, k, v)
+                except Exception:
+                    pass
+        # Move the new mapping right after the original
+        mapping_set.button_mappings.move(len(mapping_set.button_mappings)-1, bm_idx+1)
+        mapping_set.active_button_mapping = bm_idx+1
+        self.report({'INFO'}, "Button mapping duplicated")
+        return {'FINISHED'}
+
+
 def register():
     bpy.utils.register_class(EXPORT_OT_mapping_set)
     bpy.utils.register_class(IMPORT_OT_mapping_set)
+    bpy.utils.register_class(DUPLICATE_OT_mapping_set)
+    bpy.utils.register_class(DUPLICATE_OT_button_mapping)
+
 
 def unregister():
+    bpy.utils.unregister_class(DUPLICATE_OT_button_mapping)
+    bpy.utils.unregister_class(DUPLICATE_OT_mapping_set)
     bpy.utils.unregister_class(IMPORT_OT_mapping_set)
     bpy.utils.unregister_class(EXPORT_OT_mapping_set)

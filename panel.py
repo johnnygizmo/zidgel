@@ -2,13 +2,19 @@ import bpy
 from . import fastgamepad
 
 class FG_PT_MappingSetsPanel(bpy.types.Panel):
-    bl_label = "Puppet Strings"
+    bl_label = "Puppet Strings" 
     bl_idname = "FG_PT_mapping_sets"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
     bl_category = "Gamepad"
 
+
+
     def draw(self, context):
+        # if self.bl_label == "Puppet Strings":
+        #     self.bl_label += self.get_addon_version()
+        
+
         layout = self.layout
         scene = context.scene
         settings  = scene.johnnygizmo_puppetstrings_settings
@@ -83,10 +89,12 @@ class FG_PT_MappingSetsPanel(bpy.types.Panel):
         col.operator("fg.add_mapping_set", icon='ADD', text="")
         col.operator("fg.remove_mapping_set", icon='REMOVE', text="")
         col.separator(factor=3)
-        col.operator("mapping.import_set", icon='IMPORT', text="")
+        col.operator("mapping.export_set", icon='FILE_TICK', text="")
         col.separator(factor=1)
-        col.operator("mapping.export_set", icon='EXPORT', text="")
-        
+        col.operator("mapping.import_set", icon='FILE_FOLDER', text="")
+        col.separator(factor=1)
+
+        col.operator("mapping.duplicate_set", icon='DUPLICATE', text="")       
 
 class FG_PT_ButtonMappingsPanel(bpy.types.Panel):
     bl_label = "Button Mappings"
@@ -112,7 +120,12 @@ class FG_PT_ButtonMappingsPanel(bpy.types.Panel):
         col = row.column(align=True)
         col.operator("fg.add_button_mapping", icon='ADD', text="")
         col.operator("fg.remove_button_mapping", icon='REMOVE', text="")        
+        col.separator()
+        col.operator("mapping.duplicate_button_mapping", icon='DUPLICATE', text="")  
         col = row.column(align=True)
+        
+       
+
        
 
 class PUPPETSTRINGS_PT_buttons(bpy.types.Panel):
@@ -156,7 +169,16 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
         if self.layout_type in {'DEFAULT', 'COMPACT'}:
             col = layout.column()
             row = col.row(align=True)
-           
+            
+            map_set = bpy.context.scene.johnnygizmo_puppetstrings_active_mapping_set
+            ms = bpy.context.scene.johnnygizmo_puppetstrings_mapping_sets[map_set]
+        
+            #if ms.active.button_mapping_index == index:
+            if ms.active_button_mapping_index == index:
+                row.label(text="",icon="SOLO_ON")
+            else:
+                row.label(text="",icon="SOLO_OFF")
+
             if bm.enabled:
                 row.prop(bm, "enabled", text="", icon="CHECKBOX_HLT")
             else:
