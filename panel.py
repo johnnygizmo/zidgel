@@ -1,5 +1,20 @@
 import bpy
 from . import fastgamepad
+from . import version
+
+
+
+class FG_OT_ShowHideAllButtonMappings(bpy.types.Operator):
+    bl_idname = "fg.show_hide_all_button_mappings"
+    bl_label = "Show/Hide All Button Mappings"
+
+    show: bpy.props.BoolProperty(default=True)
+
+    def execute(self, context):
+        ms = context.scene.johnnygizmo_puppetstrings_mapping_sets[context.scene.johnnygizmo_puppetstrings_active_mapping_set]
+        for bm in ms.button_mappings:
+            bm.show_panel = self.show
+        return {'FINISHED'}
 
 class FG_PT_MappingSetsPanel(bpy.types.Panel):
     bl_label = "Puppet Strings" 
@@ -11,9 +26,7 @@ class FG_PT_MappingSetsPanel(bpy.types.Panel):
 
 
     def draw(self, context):
-        # if self.bl_label == "Puppet Strings":
-        #     self.bl_label += self.get_addon_version()
-        
+        self.bl_label = "Puppet Strings v" + version.VERSION
 
         layout = self.layout
         scene = context.scene
@@ -36,6 +49,7 @@ class FG_PT_MappingSetsPanel(bpy.types.Panel):
             else:
                 row.operator("fg.start_controller", text="Controller On", icon="STRIP_COLOR_04").action = "STOP"
 
+        row.prop(settings, "mute_controller")
         if context.screen.is_animation_playing:
             if settings.enable_record:
                 row.prop(settings, "enable_record",text="Recording", icon="RECORD_ON")
@@ -63,15 +77,10 @@ class FG_PT_MappingSetsPanel(bpy.types.Panel):
         row.prop_search(context.scene.johnnygizmo_puppetstrings_settings, "punch_out_marker", context.scene, "timeline_markers", text="Out", icon='EXPORT')
         row = layout.row()
         row.prop(context.scene.johnnygizmo_puppetstrings_settings, "pre_roll")
-        # row.prop(context.scene.johnnygizmo_puppetstrings_settings, "punch_in")
-        # row.prop(context.scene.johnnygizmo_puppetstrings_settings, "punch_out")
-
         row.prop(context.scene.johnnygizmo_puppetstrings_settings, "one_shot", text="Prevent Looping Animation")
         row = layout.row()
         row.prop(context.scene.johnnygizmo_puppetstrings_settings, "auto_simplify", text="Auto-Simplify")
       
-
-
         row = layout.row()
         row.prop(context.scene.johnnygizmo_puppetstrings_settings, "controller_fps")
         row.prop(context.scene.johnnygizmo_puppetstrings_settings, "keyframe_interval")
@@ -122,6 +131,11 @@ class FG_PT_ButtonMappingsPanel(bpy.types.Panel):
         col.operator("fg.remove_button_mapping", icon='REMOVE', text="")        
         col.separator()
         col.operator("mapping.duplicate_button_mapping", icon='DUPLICATE', text="")  
+        col.separator()
+        col.operator("fg.show_hide_all_button_mappings", text="", icon="HIDE_OFF").show = True
+        col.operator("fg.show_hide_all_button_mappings", text="",icon="HIDE_ON").show = False
+                
+        
         col = row.column(align=True)
         
        
@@ -173,7 +187,6 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
             map_set = bpy.context.scene.johnnygizmo_puppetstrings_active_mapping_set
             ms = bpy.context.scene.johnnygizmo_puppetstrings_mapping_sets[map_set]
         
-            #if ms.active.button_mapping_index == index:
             if ms.active_button_mapping_index == index:
                 row.label(text="",icon="SOLO_ON")
             else:
@@ -187,9 +200,11 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
                 row.prop(bm, "show_panel", text="", icon="HIDE_OFF")
             else:
                 row.prop(bm, "show_panel", text="", icon="HIDE_ON")
+            row.prop(bm, "name", text="")
             row.prop(bm, "button", text="")
             #layout.prop(bm, "invert", icon="ARROW_LEFTRIGHT", text="")
 
+<<<<<<< HEAD
             #layout.prop(bm, "scale", text="")
             row.prop_search(bm, "object_target", bpy.data, "objects", text="")
             
@@ -211,6 +226,29 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
                     row.label(text="Input Adjustments:")
                     row.prop(bm, "scaling", text="Scaling")
                     row.prop(bm, "rounding", text="Rounding")
+=======
+           
+                            
+            if bm.show_panel:
+
+                row = col.row(align=True)
+                 #layout.prop(bm, "scale", text="")
+                row.prop_search(bm, "object_target", bpy.data, "objects", text="")
+                
+                #ob = bpy.data.objects.get(bm.object)
+                ob = bm.object_target
+                if ob and ob.type == "ARMATURE":
+                    row.prop_search(
+                    bm,"sub_data_path",
+                    ob.data, "bones",
+                    text=""
+                    )
+                row = col.row(align=True)
+                row.separator(factor=3)
+                row.label(text="Input Adjustments:")
+                row.prop(bm, "scaling", text="Scaling")
+                row.prop(bm, "rounding", text="Rounding")
+>>>>>>> origin/main
 
                     row = col.row(align=True)
                     row.separator(factor=3)
@@ -237,16 +275,13 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
                 if bm.mapping_type in ("location", "rotation_euler", "scale")  :
                     row.prop(bm, "axis", text="")
                 elif bm.mapping_type == "shape_key":
-                    #ob = bpy.data.objects.get(bm.object)
-                    ob = bm.object_target
-                    #layout.template_path_builder(bm, "data_path", root=ob, text="")
+                    # ob = bm.object_target                    
                     if ob and ob.type == 'MESH' and ob.data.shape_keys:
                         row.prop_search(bm, "data_path", text="", search_data=ob.data.shape_keys, search_property="key_blocks")
                     else:
                         row.prop(bm, "data_path", text="")
                 elif bm.mapping_type == "modifier":
-                    #ob = bpy.data.objects.get(bm.object)
-                    ob = bm.object_target
+                    # ob = bm.object_target
                     if ob:
                         row.prop_search(bm, "data_path", text="", search_data=ob, search_property="modifiers")
                         mod = ob.modifiers.get(bm.data_path)
@@ -255,9 +290,7 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
                 else:
                     row.prop(bm, "data_path", text="")
 
-                      
-                row.prop(bm, "keyframe_rate_override", text="Keyframe Rate")
-                
+                row.prop(bm, "keyframe_rate_override", text="Keyframe Rate")  
                 row = col.row(align=True)
                 row.separator(factor=3)
                 if(bm.operation == "curve" or bm.operation == "value" or bm.is_trigger):
@@ -268,6 +301,7 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
                 if bm.operation == "expression":
                     row.prop(bm, "expression", text="Expression", emboss=True)
                 
+<<<<<<< HEAD
 
                 if bm.is_trigger:
                     row.prop(bm, "trigger_duration")                    
@@ -281,6 +315,9 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
                 #     row.prop(bm, "clip_max")`
 
                 if bm.curve_owner and (bm.operation == "curve"  or bm.is_trigger) :
+=======
+                if bm.operation == "curve" and bm.curve_owner:
+>>>>>>> origin/main
                     row = col.row(align=True)
                     row.separator(factor=3)
                     col = row.column()
@@ -361,8 +398,10 @@ def register():
     bpy.utils.register_class(FG_OT_RemoveMappingSet)
     bpy.utils.register_class(FG_OT_AddButtonMapping)
     bpy.utils.register_class(FG_OT_RemoveButtonMapping)
+    bpy.utils.register_class(FG_OT_ShowHideAllButtonMappings)
    
 def unregister():
+    bpy.utils.unregister_class(FG_OT_ShowHideAllButtonMappings)
     bpy.utils.unregister_class(FG_OT_RemoveButtonMapping)
     bpy.utils.unregister_class(FG_OT_AddButtonMapping)
     bpy.utils.unregister_class(FG_OT_RemoveMappingSet)

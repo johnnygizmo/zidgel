@@ -144,7 +144,7 @@ def get_buttons(a,aa):
 
 
 def set_active_object(mapping, context):
-    if mapping.object_target is None:
+    if not mapping.object_target:
         mapping.sub_data_path = ""
         return None
     for o in bpy.context.selected_objects:
@@ -176,9 +176,8 @@ class ButtonMapping(bpy.types.PropertyGroup):
     ) # type: ignore
 
 
-
+    name: bpy.props.StringProperty(name="Name", default="Name") # type: ignore
     enabled: bpy.props.BoolProperty(name="Enabled", default=True) # type: ignore
-    object: bpy.props.StringProperty(name="Object") # type: ignore
     object_target : bpy.props.PointerProperty(
         name="Selected Object",
         description="Selected Object",

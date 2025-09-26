@@ -1,13 +1,17 @@
 # Puppetstrings
 *Johnny Matthews*
 
-## Todo
-
 
 ## What's New
 **Version 1.1.1**
 
+* Add Mapping Names
 * Add duplicate mapping button
+* Add Show/Hide all mappings
+* Play/Start Button Starts Anim if stopped. Toggles Record while playing
+* Major revamp of value assignment code (more efficient)
+* Add "Mute Controller Input" this still allows for play/stop on controller but bypasses control
+* Guide Button Toggles "Mute Controller Input"
 
 **Version 1.1.0**
 
@@ -25,7 +29,6 @@
 * Add Input Scaling and Rounding
 * Try to clean up multiple timers causing slowdowns
 * Show Connected Controller Name if Available
-
 
 **Version 1.0.9**
 
@@ -79,7 +82,7 @@
 * G  Directional Buttons (North, South, East, West)
 * H  Right Stick
 * I  Speaker
-* J  Guide Button
+* J  Guide Button (Toggle Controller Output)
 * K  Headset Jack
 * L  Microphone
 * M  Mute (Misc 1 Button)
@@ -106,12 +109,17 @@
 
 ### Controls
 
-* **Start Button**: Start the play control.
+* **Start Button**: If stopped, start the play control. If playing and not recording, punch in. If playing and recording, punch out.
+
 * **Back Button**:
 
   * When Playing: stops playback.
   * When Stopped: goes to start frame.
 
+* **Guide Button**:
+
+  * Toggle "Mute Controller Input"
+  
 ### Recording
 
 * **Arm recording without punch** → records at all times.
@@ -160,3 +168,4 @@
 ## TODO
 
 * Make a way to set smoothing per button.
+* Multi Controller Support

@@ -14,7 +14,7 @@ def post_playback_handler(scene,depsgrap):
     fastgamepad.set_led(0,0,0)
     if active_mapping_set.active == True:
         for mapping in active_mapping_set.button_mappings:
-            if not mapping.enabled or mapping.object == "":
+            if not mapping.enabled or not mapping.object_target:
                 continue
             curve = getCurve(mapping,settings)
             if curve: 
@@ -24,6 +24,19 @@ def post_playback_handler(scene,depsgrap):
         scene.render.use_simplify = False
     elif settings.auto_simplify == "play":
         scene.render.use_simplify = False 
+
+
+def channel_mute_toggle(mapping,settings):
+    curve = getCurve(mapping,settings)
+    if settings.mute_controller:
+        curve.mute = False
+    elif settings.enable_record or settings.use_punch:         
+        if curve: 
+            curve.mute = True 
+    else:
+        if curve: 
+            curve.mute = False 
+
 
 def pre_playback_handler(scene,depsgrap):
     if len(scene.johnnygizmo_puppetstrings_mapping_sets) == 0:
@@ -41,19 +54,23 @@ def pre_playback_handler(scene,depsgrap):
     elif settings.auto_simplify == "play":
         scene.render.use_simplify = True 
 
-    if active_mapping_set.active == True:
+
+
+    if active_mapping_set.active == True:        
         for mapping in active_mapping_set.button_mappings:
-            if not mapping.enabled or mapping.object == "":
+            if not mapping.enabled or not mapping.object_target:
                 continue   
-            curve = getCurve(mapping,settings)
-            if settings.enable_record or settings.use_punch:         
-                if curve: 
-                    curve.mute = True 
-            else:
-                if curve: 
-                    curve.mute = False 
+            # curve = getCurve(mapping,settings)
+            # if settings.enable_record or settings.use_punch:         
+            #     if curve: 
+            #         curve.mute = True 
+            # else:
+            #     if curve: 
+            #         curve.mute = False 
+
+
     if settings.enable_record:
-        rumble.rumble_async(0xFFFF,0xFFFF,250)
+        #rumble.rumble_async(0xFFFF,0xFFFF,250)
         fastgamepad.set_led(255,0,0)
         bpy.ops.ed.undo_push()
     else:
@@ -66,8 +83,7 @@ def getCurve(mapping,settings):
         "z":2
     }
     
-    ob = bpy.data.objects.get(mapping.object) 
-
+    ob = mapping.object_target
     if mapping.mapping_type in [ "location" , "rotation_euler","scale"]:
         if(not ob or not ob.animation_data):
             return None
@@ -103,8 +119,15 @@ def getCurve(mapping,settings):
     return None
        
 def pre_frame_change_handler(scene,depsgrap):
+
     settings = scene.johnnygizmo_puppetstrings_settings
     settings.controller_running = fastgamepad.initialized()
+
+    for m in scene.johnnygizmo_puppetstrings_mapping_sets[scene.johnnygizmo_puppetstrings_active_mapping_set].button_mappings:
+        channel_mute_toggle(m ,settings)    
+
+
+
     punch_in_marker = getattr(settings, "punch_in_marker","")
     punch_out_marker = getattr(settings, "punch_out_marker","")        
     punch_in = scene.timeline_markers.get(punch_in_marker, None)
@@ -124,12 +147,12 @@ def pre_frame_change_handler(scene,depsgrap):
 
         settings.enable_record = True 
         bpy.ops.ed.undo_push()
-        rumble.rumble_async(0xFFFF,0xFFFF,250)
+        #rumble.rumble_async(0xFFFF,0xFFFF,250)
         fastgamepad.set_led(255,0,0)
         
     if scene.frame_current == punch_out_frame and settings.enable_record and settings.use_punch:
         settings.enable_record = False
-        rumble.rumble_async(0xFFFF,0xFFFF,250)
+        #rumble.rumble_async(0xFFFF,0xFFFF,250)
         fastgamepad.set_led(0,255,0)
 
     if settings.use_punch and scene.frame_current > punch_out_frame + pre_roll:

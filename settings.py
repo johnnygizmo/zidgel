@@ -37,20 +37,6 @@ class JOHNNYGIZMO_PuppetStringsSettings(bpy.types.PropertyGroup):
         min=0,
     )  # type: ignore
 
-    # punch_in: bpy.props.IntProperty(
-    #     name="Punch In",
-    #     description="Frame to start recording",
-    #     default=1,
-    #     min=1,
-    # )  # type: ignore
-
-    # punch_out: bpy.props.IntProperty(
-    #     name="Punch Out",
-    #     description="Frame to stop recording",
-    #     default=10,
-    #     min=1,
-    # )  # type: ignore
-
     one_shot: bpy.props.BoolProperty(
         name="One Shot",
         description="Record only once between punch in and punch out",
@@ -59,6 +45,10 @@ class JOHNNYGIZMO_PuppetStringsSettings(bpy.types.PropertyGroup):
 
     use_punch: bpy.props.BoolProperty(
         name="Use Punch", description="Use punch in and punch out frames", default=False
+    )  # type: ignore
+
+    mute_controller: bpy.props.BoolProperty(
+        name="Mute Controller Input", default=False
     )  # type: ignore
 
     def update_smoothing(self, context):
