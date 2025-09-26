@@ -1,6 +1,6 @@
 import bpy
 from . import fastgamepad
-import version
+from . import version
 
 
 
