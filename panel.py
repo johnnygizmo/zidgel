@@ -76,15 +76,10 @@ class FG_PT_MappingSetsPanel(bpy.types.Panel):
         row.prop_search(context.scene.johnnygizmo_puppetstrings_settings, "punch_out_marker", context.scene, "timeline_markers", text="Out", icon='EXPORT')
         row = layout.row()
         row.prop(context.scene.johnnygizmo_puppetstrings_settings, "pre_roll")
-        # row.prop(context.scene.johnnygizmo_puppetstrings_settings, "punch_in")
-        # row.prop(context.scene.johnnygizmo_puppetstrings_settings, "punch_out")
-
         row.prop(context.scene.johnnygizmo_puppetstrings_settings, "one_shot", text="Prevent Looping Animation")
         row = layout.row()
         row.prop(context.scene.johnnygizmo_puppetstrings_settings, "auto_simplify", text="Auto-Simplify")
       
-
-
         row = layout.row()
         row.prop(context.scene.johnnygizmo_puppetstrings_settings, "controller_fps")
         row.prop(context.scene.johnnygizmo_puppetstrings_settings, "keyframe_interval")
@@ -191,7 +186,6 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
             map_set = bpy.context.scene.johnnygizmo_puppetstrings_active_mapping_set
             ms = bpy.context.scene.johnnygizmo_puppetstrings_mapping_sets[map_set]
         
-            #if ms.active.button_mapping_index == index:
             if ms.active_button_mapping_index == index:
                 row.label(text="",icon="SOLO_ON")
             else:
@@ -252,16 +246,13 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
                 if bm.mapping_type in ("location", "rotation_euler", "scale")  :
                     row.prop(bm, "axis", text="")
                 elif bm.mapping_type == "shape_key":
-                    #ob = bpy.data.objects.get(bm.object)
-                    ob = bm.object_target
-                    #layout.template_path_builder(bm, "data_path", root=ob, text="")
+                    # ob = bm.object_target                    
                     if ob and ob.type == 'MESH' and ob.data.shape_keys:
                         row.prop_search(bm, "data_path", text="", search_data=ob.data.shape_keys, search_property="key_blocks")
                     else:
                         row.prop(bm, "data_path", text="")
                 elif bm.mapping_type == "modifier":
-                    #ob = bpy.data.objects.get(bm.object)
-                    ob = bm.object_target
+                    # ob = bm.object_target
                     if ob:
                         row.prop_search(bm, "data_path", text="", search_data=ob, search_property="modifiers")
                         mod = ob.modifiers.get(bm.data_path)
@@ -270,9 +261,7 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
                 else:
                     row.prop(bm, "data_path", text="")
 
-                      
-                row.prop(bm, "keyframe_rate_override", text="Keyframe Rate")
-                
+                row.prop(bm, "keyframe_rate_override", text="Keyframe Rate")  
                 row = col.row(align=True)
                 row.separator(factor=3)
                 if(bm.operation == "curve" or bm.operation == "value"):
@@ -283,13 +272,6 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
                 if bm.operation == "expression":
                     row.prop(bm, "expression", text="Expression", emboss=True)
                 
-
-
-                # row.prop(bm, "use_clipping")
-                # if bm.use_clipping:
-                #     row.prop(bm, "clip_min")
-                #     row.prop(bm, "clip_max")`
-
                 if bm.operation == "curve" and bm.curve_owner:
                     row = col.row(align=True)
                     row.separator(factor=3)

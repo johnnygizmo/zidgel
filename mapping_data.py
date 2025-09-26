@@ -143,7 +143,7 @@ def get_buttons(a,aa):
 
 
 def set_active_object(mapping, context):
-    if mapping.object_target is None:
+    if not mapping.object_target:
         mapping.sub_data_path = ""
         return None
     for o in bpy.context.selected_objects:
