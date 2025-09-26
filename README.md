@@ -3,11 +3,13 @@
 
 ## Todo
 
-
 ## What's New
 **Version 1.1.1**
 
 * Add duplicate mapping button
+* Add Show/Hide all mappings
+* Play/Start Button Starts Anim if stopped. Toggles Record while playing
+* Major revamp of value assignment code (more effecient)
 
 **Version 1.1.0**
 
