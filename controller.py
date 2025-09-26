@@ -71,8 +71,14 @@ class FG_OT_StartController(bpy.types.Operator):
         start = buttons.get("start", 0)
         pstart =prev.get("start",0)
 
+        guide = buttons.get("guide",0)
+        pguide =prev.get("guide",0)
+
         back = buttons.get("back", 0)
         pback =prev.get("back",0)
+
+        if guide == 1 and pguide == 0:            
+            settings.mute_controller = not settings.mute_controller
 
         if not context.screen.is_animation_playing:
             if start == 1 and pstart == 0:                           
@@ -275,13 +281,17 @@ class FG_OT_StartController(bpy.types.Operator):
                     buttons_list.append(bmd[0])
 
             combined = fastgamepad.get_button_list(buttons_list)
-
             active_mapping_set = self.get_active_mapping_set(context)
             
             # Handle Start/Stop
             self.playback_controls(context, combined, self.previous_button_list)
 
             self.previous_button_list = combined.copy()
+            
+            if settings.mute_controller:
+                return {"PASS_THROUGH"}
+            
+            
 
             if active_mapping_set and active_mapping_set.active :
                 for mapping in active_mapping_set.button_mappings:

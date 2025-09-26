@@ -175,9 +175,8 @@ class ButtonMapping(bpy.types.PropertyGroup):
     ) # type: ignore
 
 
-
+    name: bpy.props.StringProperty(name="Name", default="Name") # type: ignore
     enabled: bpy.props.BoolProperty(name="Enabled", default=True) # type: ignore
-    object: bpy.props.StringProperty(name="Object") # type: ignore
     object_target : bpy.props.PointerProperty(
         name="Selected Object",
         description="Selected Object",

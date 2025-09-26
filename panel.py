@@ -49,6 +49,7 @@ class FG_PT_MappingSetsPanel(bpy.types.Panel):
             else:
                 row.operator("fg.start_controller", text="Controller On", icon="STRIP_COLOR_04").action = "STOP"
 
+        row.prop(settings, "mute_controller")
         if context.screen.is_animation_playing:
             if settings.enable_record:
                 row.prop(settings, "enable_record",text="Recording", icon="RECORD_ON")
@@ -199,22 +200,26 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
                 row.prop(bm, "show_panel", text="", icon="HIDE_OFF")
             else:
                 row.prop(bm, "show_panel", text="", icon="HIDE_ON")
+            row.prop(bm, "name", text="")
             row.prop(bm, "button", text="")
             #layout.prop(bm, "invert", icon="ARROW_LEFTRIGHT", text="")
 
-            #layout.prop(bm, "scale", text="")
-            row.prop_search(bm, "object_target", bpy.data, "objects", text="")
-            
-            #ob = bpy.data.objects.get(bm.object)
-            ob = bm.object_target
-            if ob and ob.type == "ARMATURE":
-                row.prop_search(
-                bm,"sub_data_path",
-                ob.data, "bones",
-                text=""
-                )
+           
                             
             if bm.show_panel:
+
+                row = col.row(align=True)
+                 #layout.prop(bm, "scale", text="")
+                row.prop_search(bm, "object_target", bpy.data, "objects", text="")
+                
+                #ob = bpy.data.objects.get(bm.object)
+                ob = bm.object_target
+                if ob and ob.type == "ARMATURE":
+                    row.prop_search(
+                    bm,"sub_data_path",
+                    ob.data, "bones",
+                    text=""
+                    )
                 row = col.row(align=True)
                 row.separator(factor=3)
                 row.label(text="Input Adjustments:")

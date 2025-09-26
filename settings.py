@@ -47,6 +47,10 @@ class JOHNNYGIZMO_PuppetStringsSettings(bpy.types.PropertyGroup):
         name="Use Punch", description="Use punch in and punch out frames", default=False
     )  # type: ignore
 
+    mute_controller: bpy.props.BoolProperty(
+        name="Mute Controller Input", default=False
+    )  # type: ignore
+
     def update_smoothing(self, context):
         if fastgamepad.initialized():
             fastgamepad.set_smoothing(self.smoothing)
