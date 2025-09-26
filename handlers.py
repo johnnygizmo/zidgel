@@ -53,7 +53,7 @@ def pre_playback_handler(scene,depsgrap):
                 if curve: 
                     curve.mute = False 
     if settings.enable_record:
-        rumble.rumble_async(0xFFFF,0xFFFF,250)
+        #rumble.rumble_async(0xFFFF,0xFFFF,250)
         fastgamepad.set_led(255,0,0)
         bpy.ops.ed.undo_push()
     else:
@@ -124,12 +124,12 @@ def pre_frame_change_handler(scene,depsgrap):
 
         settings.enable_record = True 
         bpy.ops.ed.undo_push()
-        rumble.rumble_async(0xFFFF,0xFFFF,250)
+        #rumble.rumble_async(0xFFFF,0xFFFF,250)
         fastgamepad.set_led(255,0,0)
         
     if scene.frame_current == punch_out_frame and settings.enable_record and settings.use_punch:
         settings.enable_record = False
-        rumble.rumble_async(0xFFFF,0xFFFF,250)
+        #rumble.rumble_async(0xFFFF,0xFFFF,250)
         fastgamepad.set_led(0,255,0)
 
     if settings.use_punch and scene.frame_current > punch_out_frame + pre_roll:
