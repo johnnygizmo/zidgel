@@ -14,34 +14,8 @@ from . import mapping_data
 from . import handlers
 from . import fastgamepad
 from . import mapping_data
+from .function_lib import easing
 
-
-previous_button_list = {}
-BUTTON_DATA_DICT = {}
-
-def easing(value, easing_type):
-    if easing_type == "linear":
-        return value
-    elif easing_type == "x2":
-        return value**2 * (1 if value >= 0 else -1)
-    elif easing_type == "x3":
-        return value**3
-    elif easing_type == "sqrt":
-        return math.sqrt(math.fabs(value)) * (1 if value >= 0 else -1)
-    elif easing_type == "cubet":
-        return math.pow(math.fabs(value),.333) * (1 if value >= 0 else -1)
-    elif easing_type == "sin":
-        return math.sin(value * math.pi / 2)
-    elif easing_type == "log":
-        if value == 0:
-            return 0
-        else:
-            return math.copysign(math.log1p(math.fabs(value) * (math.e - 1)), value)
-    elif easing_type == "smoothstep":
-        x = (value + 1) / 2
-        s = 3*x * x - 2 * x * x * x
-        return 2 * s -1
-    return value
 
 class FG_OT_StartController(bpy.types.Operator):
     """Start polling the gamepad"""
@@ -54,6 +28,7 @@ class FG_OT_StartController(bpy.types.Operator):
     _punch_out = None
     _pre_roll = 0
     previous_button_list = {}
+    current_button_list = {}
     axis_map = {"x": 0, "y": 1, "z": 2}
 
     action: bpy.props.EnumProperty(
@@ -280,18 +255,15 @@ class FG_OT_StartController(bpy.types.Operator):
                 if bmd[0] not in buttons_list:                    
                     buttons_list.append(bmd[0])
 
-            combined = fastgamepad.get_button_list(buttons_list)
+            self.previous_button_list = self.current_button_list.copy()
+            self.current_button_list = fastgamepad.get_button_list(buttons_list)
             active_mapping_set = self.get_active_mapping_set(context)
             
             # Handle Start/Stop
-            self.playback_controls(context, combined, self.previous_button_list)
+            self.playback_controls(context, self.current_button_list, self.previous_button_list)
 
-            self.previous_button_list = combined.copy()
-            
             if settings.mute_controller:
-                return {"PASS_THROUGH"}
-            
-            
+                return {"PASS_THROUGH"}       
 
             if active_mapping_set and active_mapping_set.active :
                 for mapping in active_mapping_set.button_mappings:
@@ -306,7 +278,7 @@ class FG_OT_StartController(bpy.types.Operator):
                     if ob and ob.type == 'ARMATURE' and mapping.mapping_type == "shape_key":
                         continue
 
-                    raw_value = combined.get(mapping.button)
+                    raw_value = self.current_button_list.get(mapping.button)
                     raw_value = raw_value * mapping.scaling
                     raw_value = round(raw_value, mapping.rounding)
 
@@ -419,8 +391,6 @@ class FG_OT_StartController(bpy.types.Operator):
         context.scene.johnnygizmo_puppetstrings_settings.controller_running = False
         fastgamepad.quit()
         return None
-
-
 
 
 def register(): 
