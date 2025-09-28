@@ -1,6 +1,7 @@
 import bpy
 from . import fastgamepad
 from . import version
+from .preset_helper import PRESET_TYPES
 
 
 
@@ -137,10 +138,6 @@ class FG_PT_ButtonMappingsPanel(bpy.types.Panel):
                 
         
         col = row.column(align=True)
-        
-       
-
-       
 
 class PUPPETSTRINGS_PT_buttons(bpy.types.Panel):
     bl_label = "Puppet Strings Buttons"
@@ -320,20 +317,20 @@ class FG_OT_AddButtonMapping(bpy.types.Operator):
         mapping = ms.button_mappings.add()
         if not mapping.curve_owner:
             brush = bpy.data.brushes.new("ButtonMappingCurve", mode='TEXTURE_PAINT')
-            brush.curve_preset = 'LIN'
-            brush.curve.update()
-            brush.curve.clip_min_x = -1
-            brush.curve.clip_max_x = 1
-            brush.curve.clip_min_y = -1
-            brush.curve.clip_max_y = 1
-            brush.curve.curves[0].points[0].location = (-1, -1)
-            brush.curve.curves[0].points[1].location = (1, 1)
-            points = brush.curve.curves[0].points
+            brush.curve_distance_falloff_preset = 'LIN'
+            brush.curve_distance_falloff.update()
+            brush.curve_distance_falloff.clip_min_x = -1
+            brush.curve_distance_falloff.clip_max_x = 1
+            brush.curve_distance_falloff.clip_min_y = -1
+            brush.curve_distance_falloff.clip_max_y = 1
+            brush.curve_distance_falloff.curves[0].points[0].location = (-1, -1)
+            brush.curve_distance_falloff.curves[0].points[1].location = (1, 1)
+            points = brush.curve_distance_falloff.curves[0].points
             while len(points) > 2:
                 points.remove(points[2])
-            brush.curve.update()
+            brush.curve_distance_falloff.update()
 
-            brush.curve.reset_view()
+            brush.curve_distance_falloff.reset_view()
             mapping.curve_owner = brush
         return {'FINISHED'}
 
