@@ -318,6 +318,18 @@ class FG_OT_AddButtonMapping(bpy.types.Operator):
     def execute(self, context):
         ms = context.scene.johnnygizmo_puppetstrings_mapping_sets[context.scene.johnnygizmo_puppetstrings_active_mapping_set]
         mapping = ms.button_mappings.add()
+        
+        mode = context.active_object.mode
+        if context.active_object and context.active_object.select_get():
+            mapping.object_target = context.active_object
+            bpy.ops.object.mode_set(mode=mode)
+            if mapping.object_target.type == 'ARMATURE':
+                if mapping.object_target.mode == 'POSE':
+                    
+                    pose_bone = context.active_pose_bone
+                    if pose_bone:
+                        mapping.sub_data_path = pose_bone.name
+                
         if not mapping.curve_owner:
             brush = bpy.data.brushes.new("ButtonMappingCurve", mode='TEXTURE_PAINT')
             brush.curve_preset = 'LIN'
