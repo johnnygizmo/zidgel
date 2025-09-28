@@ -273,12 +273,15 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
                 if(bm.operation == "curve" or bm.operation == "value"):
                     row.prop(bm, "assignment", text="")
                 
-                row.prop(bm, "operation", text="Use", emboss=True)
+                row.prop(bm, "operation", text="", emboss=True)
                 row.prop(bm, "input_easing", text="Easing")
                 if bm.operation == "expression":
                     row.prop(bm, "expression", text="Expression", emboss=True)
-                
-                if bm.operation == "curve" and bm.curve_owner:
+                if bm.operation in ('action_once','action_once_reset',"action_out_back","action_hold","action_repeat"):
+                    row.prop(bm, "action_duration", text="Duration", emboss=True)
+
+
+                if bm.operation in ("curve",'action_once','action_once_reset',"action_out_back","action_hold","action_repeat") and bm.curve_owner:
                     row = col.row(align=True)
                     row.separator(factor=3)
                     col = row.column()

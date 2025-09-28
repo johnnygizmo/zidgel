@@ -22,6 +22,13 @@ MAPPING_OPS = [
     ("curve","Curve","Use a curve to define conversion"),
     ("invertb", "Inverted Button Value (1 - value)", "Use the inverted button value (1 - value)"),
     ("inverta", "Inverted Axis Value (-value)", "Use the inverted axis value (-value)"),
+    ("action_once" , "Action - Single","Play through a curve action once"),
+    ("action_once_reset" , "Action - Single Reset","Play through a curve action once, pressing again resets"),
+    
+    ("action_out_back", "Action - Out and Back","Play an action and then play it backwards"),
+    ("action_hold","Action - Hold","Play an action and hold end as long as the button is held"),
+    ("action_repeat","Action - Repeat","Play an action as long as the button is held"),
+
     ("expression", "AssignmentExpression", "Use a Python expression to modify the button/axis value"),
 ]
 
@@ -244,6 +251,8 @@ class ButtonMapping(bpy.types.PropertyGroup):
     clip_min: bpy.props.FloatProperty(name="Clip Min", default=-1.0) # type: ignore
     clip_max: bpy.props.FloatProperty(name="Clip Max", default=1.0) # type: ignore
 
+    action_start_time:  bpy.props.FloatProperty(name="Action Start Time", default = 0.0) #type: ignore 
+    action_duration:  bpy.props.FloatProperty(name="Action Duration", default = 1.0) #type: ignore 
 
 def update_active_mapping_set(self,context):
     gamepad = self.gamepad_number

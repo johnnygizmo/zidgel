@@ -9,6 +9,7 @@ bl_info = {
 from multiprocessing import context
 import bpy
 import math
+import time
 #from . import rumble
 from . import mapping_data
 from . import handlers
@@ -30,6 +31,7 @@ class FG_OT_StartController(bpy.types.Operator):
     previous_button_list = []
     current_button_list = []
     axis_map = {"x": 0, "y": 1, "z": 2}
+    tstart = 0.0
 
     action: bpy.props.EnumProperty(
         name="Action",
@@ -287,49 +289,89 @@ class FG_OT_StartController(bpy.types.Operator):
                         continue
 
                     raw_value = self.current_button_list[m.gamepad_number].get(mapping.button)
-                    raw_value = raw_value * mapping.scaling
-                    raw_value = round(raw_value, mapping.rounding)
+                    prev_value = self.previous_button_list[m.gamepad_number].get(mapping.button)
+                    rvalue = 0
 
-                    if mapping.use_input_clipping:
-                        raw_value = max(mapping.input_clip_min, min(mapping.input_clip_max, raw_value))
+                    if mapping.operation in ('action_once','action_once_reset',"action_out_back","action_hold","action_repeat"):
+                        t = round(time.time()-self.tstart,4)
+                       
+                        if raw_value == 0 and prev_value == 0\
+                              and mapping.action_start_time < 0:
+                            continue
+                        
+                        st = round(mapping.action_start_time,4)
+                        elapsed = round(t - st,4)
 
-                    value = raw_value
-                    value = easing(value, mapping.input_easing)  
+                        if mapping.operation == 'action_once':
+                            if raw_value == 1 and prev_value == 0 and (st < 0 or elapsed > mapping.action_duration):
+                                mapping.action_start_time = round(t,4)
+                            elif raw_value == 0 and prev_value == 0 and (st < 0 or elapsed > mapping.action_duration):
+                                continue
 
-                    scale = 1.0
-                    rvalue = raw_value
+                        elif mapping.operation == 'action_once_reset':
+                            if raw_value == 1 and prev_value == 0:
+                                mapping.action_start_time = round(t,4)
+                            elif raw_value == 0 and prev_value == 0 and (st < 0 or elapsed > mapping.action_duration):
+                                continue
 
-                    if mapping.assignment == "add":
-                        scale = 1 / scene.render.fps                        
-                    elif mapping.assignment == "subtract":
-                        scale = 1 / scene.render.fps
-                    elif mapping.assignment == "multiply":
-                        scale = 1 / scene.render.fps
+                        st = round(mapping.action_start_time,4)                                                
+                        elapsed = round(t - st,4)
+                        
+                        
+                        if st != 0 and elapsed < mapping.action_duration:
+                            print("elapsed:",elapsed)
+                            rvalue = mapping.curve_owner.curve.evaluate(\
+                                                    mapping.curve_owner.curve.curves[0],\
+                                                    round(elapsed/mapping.action_duration,3))
+                                          
+                        else:
+                            print("hrm")
+                            continue
 
-                    if mapping.operation == "curve":
-                        mapped = mapping.curve_owner.curve.evaluate(mapping.curve_owner.curve.curves[0],value)
-                        rvalue = round(mapped*scale,6)
-                    elif mapping.operation == "expression":
-                        rvalue = mapping.expression
-                    elif mapping.operation == "invertb":                        
-                        rvalue = 1 - value
-                    elif mapping.operation == "inverta":                        
-                        rvalue = -value
+                    else :
+                        raw_value = raw_value * mapping.scaling
+                        raw_value = round(raw_value, mapping.rounding)
 
-                    
-                    if mapping.rounding == 0:
-                        rvalue = int(rvalue)                    
-                    
-                    
-                    if mapping.assignment == "add":
-                        rvalue = self.get_mapping_value(mapping) + rvalue
-                    elif mapping.assignment == "subtract":
-                        rvalue = self.get_mapping_value(mapping) - rvalue
-                    elif mapping.assignment == "multiply":
-                        rvalue = self.get_mapping_value(mapping) * rvalue
-                    
-                    if mapping.use_clipping:
-                            rvalue = max(mapping.clip_min, min(mapping.clip_max,rvalue))
+                        if mapping.use_input_clipping:
+                            raw_value = max(mapping.input_clip_min, min(mapping.input_clip_max, raw_value))
+
+                        value = raw_value
+                        value = easing(value, mapping.input_easing)  
+
+                        scale = 1.0
+                        rvalue = raw_value
+
+                        if mapping.assignment == "add":
+                            scale = 1 / scene.render.fps                        
+                        elif mapping.assignment == "subtract":
+                            scale = 1 / scene.render.fps
+                        elif mapping.assignment == "multiply":
+                            scale = 1 / scene.render.fps
+
+                        if mapping.operation == "curve":
+                            mapped = mapping.curve_owner.curve.evaluate(mapping.curve_owner.curve.curves[0],value)
+                            rvalue = round(mapped*scale,6)
+                        elif mapping.operation == "expression":
+                            rvalue = mapping.expression
+                        elif mapping.operation == "invertb":                        
+                            rvalue = 1 - value
+                        elif mapping.operation == "inverta":                        
+                            rvalue = -value
+
+                        
+                        if mapping.rounding == 0:
+                            rvalue = int(rvalue)                    
+                        
+                        
+                        if mapping.assignment == "add":
+                            rvalue = self.get_mapping_value(mapping) + rvalue
+                        elif mapping.assignment == "subtract":
+                            rvalue = self.get_mapping_value(mapping) - rvalue
+                        elif mapping.assignment == "multiply":
+                            rvalue = self.get_mapping_value(mapping) * rvalue
+                        
+                        if mapping.use_clipping:
+                                rvalue = max(mapping.clip_min, min(mapping.clip_max,rvalue))
 
                     self.set_mapping_value(mapping,rvalue)                                          
                     #print(m.name, mapping.name, mapping.object_target.name, rvalue)
@@ -364,6 +406,7 @@ class FG_OT_StartController(bpy.types.Operator):
 
 
     def execute(self, context):
+        self.tstart = round(time.time(),0)
         if self.action == "STOP":                     
             self.cancel(context)
             return {"FINISHED"}
@@ -380,8 +423,8 @@ class FG_OT_StartController(bpy.types.Operator):
                     self.current_button_list.append({})
                     self.previous_button_list.append({})
 
-
-
+                    for m in ms.button_mappings:
+                        m.action_start_time = -1
 
             fastgamepad.set_smoothing(context.scene.johnnygizmo_puppetstrings_settings.smoothing)
             wm = context.window_manager
