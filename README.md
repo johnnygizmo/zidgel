@@ -4,13 +4,12 @@
 
 ## What's New
 
-**Version 1.2.0**
+**Version 1.1.2**
 
 * Multiple Controller Support
 * Controller is set with player number of controller
-  * Off - Controller 0
-  * 1   - Controller 1
-  * 2   - Controller 2
+  * 0 lights - Controller 0
+  * 1 lights - Controller 1
   * etc
 
 **Version 1.1.1**
