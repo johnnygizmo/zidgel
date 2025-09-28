@@ -171,6 +171,7 @@ class FG_UL_MappingSetList(bpy.types.UIList):
                 layout.prop(ms, "active", text="", icon="CHECKBOX_DEHLT")
 
             layout.prop(ms, "name", text="", emboss=False)
+            layout.prop(ms, "gamepad_number", text="", emboss=False)
             
         elif self.layout_type in {'GRID'}:
             layout.alignment = 'CENTER'

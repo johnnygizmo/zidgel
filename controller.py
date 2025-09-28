@@ -27,8 +27,8 @@ class FG_OT_StartController(bpy.types.Operator):
     _punch_in = None
     _punch_out = None
     _pre_roll = 0
-    previous_button_list = {}
-    current_button_list = {}
+    previous_button_list = []
+    current_button_list = []
     axis_map = {"x": 0, "y": 1, "z": 2}
 
     action: bpy.props.EnumProperty(
@@ -117,16 +117,15 @@ class FG_OT_StartController(bpy.types.Operator):
                             mod.keyframe_delete(data_path=mapping.sub_data_path)
 
             
-    def get_active_mapping_set(self, context):
-        mapping_sets = context.scene.johnnygizmo_puppetstrings_mapping_sets
-        active_mapping_set = None
-        if len(mapping_sets) > 0:
-            return mapping_sets[context.scene.johnnygizmo_puppetstrings_active_mapping_set]
-        else:
-            return None
+    # def get_active_mapping_set(self, context):
+    #     mapping_sets = context.scene.johnnygizmo_puppetstrings_mapping_sets
+    #     active_mapping_set = None
+    #     if len(mapping_sets) > 0:
+    #         return mapping_sets[context.scene.johnnygizmo_puppetstrings_active_mapping_set]
+    #     else:
+    #         return None
 
-    def set_mapping_value(self,mapping, rvalue):
-        
+    def set_mapping_value(self, mapping, rvalue): 
         ob = mapping.object_target
         if mapping.mapping_type == "location":
             if ob and ob.type != 'ARMATURE' or mapping.sub_data_path == "" :
@@ -226,59 +225,68 @@ class FG_OT_StartController(bpy.types.Operator):
 
 
     def modal(self, context, event):
-        if not hasattr(self, "previous_button_list"):
-            self.previous_button_list = {}
+
+        active_sets = []
+        for ms in bpy.context.scene.johnnygizmo_puppetstrings_mapping_sets:
+            if ms.active:
+                if ms not in active_sets:
+                    active_sets.append(ms)
 
         scene = context.scene
         settings = scene.johnnygizmo_puppetstrings_settings
-        settings.controller_running = fastgamepad.initialized()
-        if not settings.controller_running:
-            self.report({'WARNING'}, "Controller not running")
+        settings.controller_running = fastgamepad.initialized()   
+
+
+        if len(scene.johnnygizmo_puppetstrings_mapping_sets) == 0 or len(active_sets)==0:
+            self.report({'WARNING'}, "No mapping sets found")
             self.cancel(context)
-            return {"CANCELLED"}
+            return {"CANCELLED"}    
 
         if event.type == "TIMER":
-            buttons_list = [4,5,6]
-            if len(scene.johnnygizmo_puppetstrings_mapping_sets) == 0:
-                self.report({'WARNING'}, "No mapping sets found")
-                self.cancel(context)
-                return {"CANCELLED"}               
+            for m in active_sets:
+                if not hasattr(self, "previous_button_list"):
+                    self.previous_button_list[m.gamepad_number] = {}
 
-            m = scene.johnnygizmo_puppetstrings_mapping_sets[scene.johnnygizmo_puppetstrings_active_mapping_set]
-            if len(m.button_mappings) == 0:
-                self.report({'WARNING'}, "No mappings defined in set")
-                self.cancel(context)
-                return {"CANCELLED"}  
-                       
-            for mapping in m.button_mappings:
-                bmd = next((b for b in mapping_data.BUTTON_DATA if b[1] == mapping.button), None)
-                if bmd[0] not in buttons_list:                    
-                    buttons_list.append(bmd[0])
+                if not settings.controller_running:
+                    self.report({'WARNING'}, "Controller not running")
+                    self.cancel(context)
+                    return {"CANCELLED"}
 
-            self.previous_button_list = self.current_button_list.copy()
-            self.current_button_list = fastgamepad.get_button_list(buttons_list)
-            active_mapping_set = self.get_active_mapping_set(context)
-            
-            # Handle Start/Stop
-            self.playback_controls(context, self.current_button_list, self.previous_button_list)
+                buttons_list = [4,5,6]
+              
+                if len(m.button_mappings) == 0:
+                    self.report({'WARNING'}, "No mappings defined in set")
+                    self.cancel(context)
+                    return {"CANCELLED"}  
+                        
+                for mapping in m.button_mappings:
+                    bmd = next((b for b in mapping_data.BUTTON_DATA if b[1] == mapping.button), None)
+                    if bmd[0] not in buttons_list:                    
+                        buttons_list.append(bmd[0])            
 
-            if settings.mute_controller:
-                return {"PASS_THROUGH"}       
+                self.previous_button_list[m.gamepad_number] = self.current_button_list[m.gamepad_number].copy()
+                self.current_button_list[m.gamepad_number] = fastgamepad.get_button_list(buttons_list,m.gamepad_number)
+                #active_mapping_set = self.get_active_mapping_set(context)
+                
+                # Handle Start/Stop
+                self.playback_controls(context, self.current_button_list[m.gamepad_number], self.previous_button_list[m.gamepad_number])
 
-            if active_mapping_set and active_mapping_set.active :
-                for mapping in active_mapping_set.button_mappings:
+                if settings.mute_controller:
+                    return {"PASS_THROUGH"}       
+                
+                for mapping in m.button_mappings:
                     # if not mapping.enabled or mapping.object == "":
                     #     continue
                     if not mapping.enabled or not mapping.object_target:
                         continue
 
-                    ob = mapping.object_target
+                    ob = mapping.object_target                    
                     if not ob:
                         continue
                     if ob and ob.type == 'ARMATURE' and mapping.mapping_type == "shape_key":
                         continue
 
-                    raw_value = self.current_button_list.get(mapping.button)
+                    raw_value = self.current_button_list[m.gamepad_number].get(mapping.button)
                     raw_value = raw_value * mapping.scaling
                     raw_value = round(raw_value, mapping.rounding)
 
@@ -324,7 +332,7 @@ class FG_OT_StartController(bpy.types.Operator):
                             rvalue = max(mapping.clip_min, min(mapping.clip_max,rvalue))
 
                     self.set_mapping_value(mapping,rvalue)                                          
-                   
+                    #print(m.name, mapping.name, mapping.object_target.name, rvalue)
 
                     # HANDLE KEYFRAMES
                     if ob.type=="ARMATURE" and mapping.sub_data_path != "":
@@ -365,6 +373,16 @@ class FG_OT_StartController(bpy.types.Operator):
             self.ensure_handler(bpy.app.handlers.frame_change_post, handlers.pre_frame_change_handler)
 
             fastgamepad.init()
+
+            for ms in bpy.context.scene.johnnygizmo_puppetstrings_mapping_sets:
+                if ms.active:
+                    fastgamepad.set_player(ms.gamepad_number-1,ms.gamepad_number)
+                    self.current_button_list.append({})
+                    self.previous_button_list.append({})
+
+
+
+
             fastgamepad.set_smoothing(context.scene.johnnygizmo_puppetstrings_settings.smoothing)
             wm = context.window_manager
             fps = context.scene.johnnygizmo_puppetstrings_settings.controller_fps

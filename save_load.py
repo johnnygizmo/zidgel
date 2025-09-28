@@ -87,7 +87,7 @@ class IMPORT_OT_mapping_set(bpy.types.Operator):
             data = json.load(f)
         new_set = sets.add()
         new_set.name = data.get("name", "Imported Mapping Set")
-        new_set.active = data.get("active", True)
+        new_set.active = data.get("active", False)
         for bm_data in data.get("button_mappings", []):
             bm = new_set.button_mappings.add()
             for k, v in bm_data.items():
@@ -150,7 +150,7 @@ class DUPLICATE_OT_mapping_set(bpy.types.Operator):
         src_set = sets[idx]
         new_set = sets.add()
         new_set.name = src_set.name + " Copy"
-        new_set.active = src_set.active
+        new_set.active = False
         # Copy all button mappings
         for src_bm in src_set.button_mappings:
             bm = new_set.button_mappings.add()

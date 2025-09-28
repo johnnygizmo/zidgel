@@ -244,14 +244,27 @@ class ButtonMapping(bpy.types.PropertyGroup):
     clip_min: bpy.props.FloatProperty(name="Clip Min", default=-1.0) # type: ignore
     clip_max: bpy.props.FloatProperty(name="Clip Max", default=1.0) # type: ignore
 
+
+def update_active_mapping_set(self,context):
+    gamepad = self.gamepad_number
+    if not self.active:
+        return
+    for ms in bpy.context.scene.johnnygizmo_puppetstrings_mapping_sets:
+        if ms == self:
+            continue
+        if self.active and ms.gamepad_number == gamepad:
+            ms.active = False
+
 class MappingSet(bpy.types.PropertyGroup):
-    active: bpy.props.BoolProperty(name="Enabled", default=True) # type: ignore
+    active: bpy.props.BoolProperty(name="Enabled", default=False, update=update_active_mapping_set) # type: ignore
     name: bpy.props.StringProperty(name="Name", default="New Mapping Set") # type: ignore
+    gamepad_number: bpy.props.IntProperty(
+        name="Controller Number",
+        default=0,
+        update=update_active_mapping_set
+    ) #type: ignore
     button_mappings: bpy.props.CollectionProperty(type=ButtonMapping) # type: ignore
     active_button_mapping_index: bpy.props.IntProperty(name="Active Button Mapping Index", default=0) # type: ignore
-
-
-
 
 def register():
     bpy.utils.register_class(ButtonSetting)

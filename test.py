@@ -8,8 +8,10 @@ from multiprocessing import context
 import fastgamepad
 fastgamepad.init()
 
-fastgamepad.set_player(2)
+print(fastgamepad.set_player(-1,0))
+print(fastgamepad.set_player(-1,1))
 
+fastgamepad.get_gamepad_count()
 
 #fastgamepad.rumble(0xFFFF,0xFFFF,0)
 fastgamepad.quit()

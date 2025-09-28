@@ -3,6 +3,16 @@
 
 
 ## What's New
+
+**Version 1.2.0**
+
+* Multiple Controller Support
+* Controller is set with player number of controller
+  * Off - Controller 0
+  * 1   - Controller 1
+  * 2   - Controller 2
+  * etc
+
 **Version 1.1.1**
 
 * Add Mapping Names
