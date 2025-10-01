@@ -7,10 +7,12 @@
 **Version 1.1.2**
 
 * Multiple Controller Support
-* Controller is set with player number of controller
-  * 0 lights - Controller 0
-  * 1 lights - Controller 1
-  * etc
+  * Controller is set with player number of controller
+    * 0 lights - Controller 0
+    * 1 lights - Controller 1
+    * etc
+* Assign new Mappings to Active Object
+  * If the object is an armature and in pose mode, the active posebone will be added as well.
 
 **Version 1.1.1**
 

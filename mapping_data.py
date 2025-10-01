@@ -243,7 +243,8 @@ class ButtonMapping(bpy.types.PropertyGroup):
     use_clipping: bpy.props.BoolProperty(name="Clipping", default=False) # type: ignore
     clip_min: bpy.props.FloatProperty(name="Clip Min", default=-1.0) # type: ignore
     clip_max: bpy.props.FloatProperty(name="Clip Max", default=1.0) # type: ignore
-
+    curve_x_input: bpy.props.FloatProperty(name="Curve Input X", default=0.0) # type: ignore
+    
 
 def update_active_mapping_set(self,context):
     gamepad = self.gamepad_number

@@ -17,6 +17,58 @@ from . import mapping_data
 from .function_lib import easing
 
 
+
+
+def get_mapping_value(mapping):
+    axis_map = {"x": 0, "y": 1, "z": 2}
+    ob = mapping.object_target
+    if mapping.mapping_type == "location":
+        if ob and ob.type != 'ARMATURE' or mapping.sub_data_path == "" :
+            return ob.location[axis_map[mapping.axis]]
+        else:
+            return ob.pose.bones[mapping.sub_data_path].location[axis_map[mapping.axis]]
+    elif mapping.mapping_type == "rotation_euler":                        
+        if ob and ob.type != 'ARMATURE' or mapping.sub_data_path == "":                
+            return ob.rotation_euler[axis_map[mapping.axis]]
+        else: 
+            return ob.pose.bones[mapping.sub_data_path].rotation_euler[axis_map[mapping.axis]]
+    elif mapping.mapping_type == "scale":                        
+        if ob and ob.type != 'ARMATURE' or mapping.sub_data_path == "":
+            return ob.scale[axis_map[mapping.axis]] 
+        else:                            
+            return ob.pose.bones[mapping.sub_data_path].scale[axis_map[mapping.axis]]
+    elif mapping.mapping_type == "shape_key":
+        if ob and ob.data.shape_keys:
+            if ob.data.shape_keys.key_blocks.get(mapping.data_path):
+                return ob.data.shape_keys.key_blocks[mapping.data_path].value
+            return
+    elif mapping.mapping_type == "modifier":
+        if ob and ob.modifiers:
+            mod = ob.modifiers.get(mapping.data_path)
+            if mod and mapping.sub_data_path:                                                    
+                if "[" in mapping.sub_data_path and mapping.sub_data_path.endswith("]"):
+                    prop_name, idx = mapping.sub_data_path[:-1].split("[")
+                    idx = int(idx)
+                    arr = getattr(mod, prop_name, None)
+                    if arr is not None and hasattr(arr, "__getitem__"):
+                        return arr[idx]
+                else:
+                    prop = mod.bl_rna.properties.get(mapping.sub_data_path)
+                    rvalue = getattr(mod, mapping.sub_data_path)                                                
+                    if prop is None:
+                        return
+                    if prop.type == 'INT':
+                        return int(rvalue)
+                    elif prop.type == 'BOOL':
+                        return bool(rvalue)
+    return
+
+
+
+
+
+
+
 class FG_OT_StartController(bpy.types.Operator):
     """Start polling the gamepad"""
 
