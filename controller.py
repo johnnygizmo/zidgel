@@ -359,7 +359,8 @@ class FG_OT_StartController(bpy.types.Operator):
                         scale = 1 / scene.render.fps
 
                     if mapping.operation == "curve":
-                        mapped = mapping.curve_owner.curve.evaluate(mapping.curve_owner.curve.curves[0],value)
+                        c =  mapping.curve_owner.curve_distance_falloff
+                        mapped =c.evaluate(c.curves[0],value)
                         rvalue = round(mapped*scale,6)
                     elif mapping.operation == "expression":
                         rvalue = mapping.expression

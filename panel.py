@@ -282,7 +282,7 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
                     row.separator(factor=3)
                     col = row.column()
                     box = col.box()
-                    box.template_curve_mapping(bm.curve_owner,"curve")
+                    box.template_curve_mapping(bm.curve_owner,"curve_distance_falloff")
 
                     row = box.row(align=True)
                     row.prop(bm, "curve_x_input", text="X")
@@ -335,20 +335,21 @@ class FG_OT_AddButtonMapping(bpy.types.Operator):
                 
         if not mapping.curve_owner:
             brush = bpy.data.brushes.new("ButtonMappingCurve", mode='TEXTURE_PAINT')
-            brush.curve_preset = 'LIN'
-            brush.curve.update()
-            brush.curve.clip_min_x = -1
-            brush.curve.clip_max_x = 1
-            brush.curve.clip_min_y = -1
-            brush.curve.clip_max_y = 1
-            brush.curve.curves[0].points[0].location = (-1, -1)
-            brush.curve.curves[0].points[1].location = (1, 1)
-            points = brush.curve.curves[0].points
+            brush.curve_distance_falloff_preset = 'LIN'
+            c = brush.curve_distance_falloff
+            c.update()
+            c.clip_min_x = -1
+            c.clip_max_x = 1
+            c.clip_min_y = -1
+            c.clip_max_y = 1
+            c.curves[0].points[0].location = (-1, -1)
+            c.curves[0].points[1].location = (1, 1)
+            points = c.curves[0].points
             while len(points) > 2:
                 points.remove(points[2])
-            brush.curve.update()
+            c.update()
 
-            brush.curve.reset_view()
+            c.reset_view()
             mapping.curve_owner = brush
         return {'FINISHED'}
 
