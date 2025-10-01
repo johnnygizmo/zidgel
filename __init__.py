@@ -16,10 +16,12 @@ from . import controller
 from . import panel
 from . import mapping_data
 from . import playback
+from . import add_curve_point
 from . import save_load
 
 def register(): 
     settings.register()
+    add_curve_point.register()
     mapping_data.register()
     playback.register()
     controller.register()
@@ -34,4 +36,5 @@ def unregister():
     controller.unregister()
     mapping_data.unregister()
     playback.unregister()
+    add_curve_point.unregister()
     settings.unregister() 

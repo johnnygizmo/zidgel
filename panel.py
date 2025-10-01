@@ -1,6 +1,7 @@
 import bpy
 from . import fastgamepad
 from . import version
+from . import add_curve_point
 
 
 
@@ -204,13 +205,11 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
             row.prop(bm, "name", text="")
             row.prop(bm, "button", text="")
             #layout.prop(bm, "invert", icon="ARROW_LEFTRIGHT", text="")
-
-           
                             
             if bm.show_panel:
-
                 row = col.row(align=True)
                  #layout.prop(bm, "scale", text="")
+                row.separator(factor=3)
                 row.prop_search(bm, "object_target", bpy.data, "objects", text="")
                 
                 #ob = bpy.data.objects.get(bm.object)
@@ -284,10 +283,14 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
                     col = row.column()
                     box = col.box()
                     box.template_curve_mapping(bm.curve_owner,"curve")
-                row = col.row(align=True)
-                row.separator(factor=3,type='LINE')
-                # row.prop(bm,"smoothing_ms")
-                # row.prop(bm,"debounce_ms")
+
+                    row = box.row(align=True)
+                    row.prop(bm, "curve_x_input", text="X")
+                    op = row.operator("fg.add_curve_point_from_current", text="Add Value From Object")
+                    op.lidx = context.scene.johnnygizmo_puppetstrings_active_mapping_set
+                    op.midx = index
+                 
+                        
                 
         elif self.layout_type in {'GRID'}:
             layout.alignment = 'CENTER'
