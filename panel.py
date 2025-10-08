@@ -211,7 +211,11 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
                  #layout.prop(bm, "scale", text="")
                 row.separator(factor=3)
                 row.prop_search(bm, "object_target", bpy.data, "objects", text="")
-                
+                if bm.object_target and \
+                    bm.object_target.type == "ARMATURE" \
+                    and bm.object_target.data.pose_position == 'REST':
+                    row.label(text="In Rest Mode")
+                             
                 #ob = bpy.data.objects.get(bm.object)
                 ob = bm.object_target
                 if ob and ob.type == "ARMATURE":
@@ -291,7 +295,6 @@ class FG_UL_ButtonMappingList(bpy.types.UIList):
                     op.midx = index
                  
                         
-                
         elif self.layout_type in {'GRID'}:
             layout.alignment = 'CENTER'
             layout.label(text=bm.name)
