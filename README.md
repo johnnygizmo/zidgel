@@ -3,6 +3,9 @@
 
 
 ## What's New
+**Version 1.1.3**
+
+* Mac Support
 
 **Version 1.1.2**
 
