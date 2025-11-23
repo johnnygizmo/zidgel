@@ -28,8 +28,8 @@ class EXPORT_OT_mapping_set(bpy.types.Operator):
                 v = getattr(bm, k)
                 if k == "curve_owner":
                     curve_data = None
-                    if bm.curve_owner and bm.curve_owner.curve:
-                        curve = bm.curve_owner.curve
+                    if bm.curve_owner and bm.curve_owner.curve_distance_falloff:
+                        curve = bm.curve_owner.curve_distance_falloff
                         # Export all points for the first curve (usually only one)
                         points = []
                         for pt in curve.curves[0].points:
@@ -99,7 +99,7 @@ class IMPORT_OT_mapping_set(bpy.types.Operator):
                     if curve_data:
                         # Create a new brush for this mapping
                         brush = bpy.data.brushes.new(name="ImportedCurve", mode='TEXTURE_PAINT')
-                        curve = brush.curve                        
+                        curve = brush.curve_distance_falloff                        
                         curve.clip_min_x = curve_data.get("clip_min_x", -1)
                         curve.clip_max_x = curve_data.get("clip_max_x", 1)
                         curve.clip_min_y = curve_data.get("clip_min_y", -1)
@@ -119,8 +119,8 @@ class IMPORT_OT_mapping_set(bpy.types.Operator):
                             points[j].handle_type = pt["handle"]
                                                    
                         bm.curve_owner = brush
-                        bm.curve_owner.curve.reset_view()
-                        bm.curve_owner.curve.update()
+                        bm.curve_owner.curve_distance_falloff.reset_view()
+                        bm.curve_owner.curve_distance_falloff.update()
                     else:
                         brush = bpy.data.brushes.new(name="ImportedCurve", mode='TEXTURE_PAINT')
                         bm.curve_owner = brush
@@ -159,10 +159,10 @@ class DUPLICATE_OT_mapping_set(bpy.types.Operator):
                 if k == "object_target":
                     bm.object_target = v
                 elif k == "curve_owner":
-                    if src_bm.curve_owner and src_bm.curve_owner.curve:
+                    if src_bm.curve_owner and src_bm.curve_owner.curve_distance_falloff:
                         brush = bpy.data.brushes.new(name="DuplicatedCurve", mode='TEXTURE_PAINT')
-                        src_curve = src_bm.curve_owner.curve
-                        dst_curve = brush.curve
+                        src_curve = src_bm.curve_owner.curve_distance_falloff
+                        dst_curve = brush.curve_distance_falloff
                         dst_curve.clip_min_x = src_curve.clip_min_x
                         dst_curve.clip_max_x = src_curve.clip_max_x
                         dst_curve.clip_min_y = src_curve.clip_min_y
@@ -179,8 +179,8 @@ class DUPLICATE_OT_mapping_set(bpy.types.Operator):
                             points[j].location = src_pt.location
                             points[j].handle_type = src_pt.handle_type
                         bm.curve_owner = brush
-                        bm.curve_owner.curve.reset_view()
-                        bm.curve_owner.curve.update()
+                        bm.curve_owner.curve_distance_falloff.reset_view()
+                        bm.curve_owner.curve_distance_falloff.update()
                     else:
                         bm.curve_owner = None
                 else:
@@ -216,10 +216,10 @@ class DUPLICATE_OT_button_mapping(bpy.types.Operator):
             if k == "object_target":
                 bm.object_target = v
             elif k == "curve_owner":
-                if src_bm.curve_owner and src_bm.curve_owner.curve:
+                if src_bm.curve_owner and src_bm.curve_owner.curve_distance_falloff:
                     brush = bpy.data.brushes.new(name="DuplicatedCurve", mode='TEXTURE_PAINT')
-                    src_curve = src_bm.curve_owner.curve
-                    dst_curve = brush.curve
+                    src_curve = src_bm.curve_owner.curve_distance_falloff
+                    dst_curve = brush.curve_distance_falloff
                     dst_curve.clip_min_x = src_curve.clip_min_x
                     dst_curve.clip_max_x = src_curve.clip_max_x
                     dst_curve.clip_min_y = src_curve.clip_min_y
@@ -234,8 +234,8 @@ class DUPLICATE_OT_button_mapping(bpy.types.Operator):
                         points[j].location = src_pt.location
                         points[j].handle_type = src_pt.handle_type
                     bm.curve_owner = brush
-                    bm.curve_owner.curve.reset_view()
-                    bm.curve_owner.curve.update()
+                    bm.curve_owner.curve_distance_falloff.reset_view()
+                    bm.curve_owner.curve_distance_falloff.update()
                 else:
                     bm.curve_owner = None
             else:

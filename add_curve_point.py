@@ -19,9 +19,9 @@ class FG_OT_AddCurvePointFromCurrent(bpy.types.Operator):
 
         y_value = controller.get_mapping_value(mapping)
         if y_value:
-            if mapping.curve_owner and mapping.curve_owner.curve:
-                curve = mapping.curve_owner.curve.curves[0]
-                
+            if mapping.curve_owner and mapping.curve_owner.curve_distance_falloff:
+                curve = mapping.curve_owner.curve_distance_falloff.curves[0]
+
                 updated = False
                 for p in curve.points:
                     if round(p.location.x,2) == round(mapping.curve_x_input,2):
@@ -44,14 +44,14 @@ class FG_OT_AddCurvePointFromCurrent(bpy.types.Operator):
                         maxy =p.location.y
                     if p.location.y < miny:
                         miny = p.location.y                
-                mapping.curve_owner.curve.clip_min_x = minx
-                mapping.curve_owner.curve.clip_max_x = maxx
-                mapping.curve_owner.curve.clip_min_y = miny
-                mapping.curve_owner.curve.clip_max_y = maxy
+                mapping.curve_owner.curve_distance_falloff.clip_min_x = minx
+                mapping.curve_owner.curve_distance_falloff.clip_max_x = maxx
+                mapping.curve_owner.curve_distance_falloff.clip_min_y = miny
+                mapping.curve_owner.curve_distance_falloff.clip_max_y = maxy
 
-                mapping.curve_owner.curve.update()
-                mapping.curve_owner.curve.reset_view()
-               
+                mapping.curve_owner.curve_distance_falloff.update()
+                mapping.curve_owner.curve_distance_falloff.reset_view()
+
             else:
                 return {'CANCELLED'}
         return {'FINISHED'}
